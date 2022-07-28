@@ -19,6 +19,10 @@ public:
 private slots:
     void on_connectButton_clicked();
 
+    void on_runButton_clicked();
+
+    void on_stopButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     Hapitrip * ht;

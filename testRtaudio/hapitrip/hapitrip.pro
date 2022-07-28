@@ -1,5 +1,6 @@
 QT -= gui
 QT += network
+include(../rtaudio/rtaudio.pri)
 
 TEMPLATE = lib
 DEFINES += HAPITRIP_LIBRARY
