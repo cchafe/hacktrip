@@ -12,10 +12,20 @@ MainWindow::MainWindow(QWidget *parent)
     m_adac.getDeviceCount();
     Lib l;
     l.hi();
+    ht = nullptr;
 }
 
 MainWindow::~MainWindow()
 {
+    if (ht != nullptr) delete ht;
     delete ui;
+}
+
+
+void MainWindow::on_connectButton_clicked()
+{
+    if (ht != nullptr) delete ht;
+    ht = new Hapitrip();
+    ht->connect(); // grab the next free client slot from server pool
 }
 

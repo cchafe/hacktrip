@@ -1,4 +1,4 @@
-QT       += core gui
+QT       += core gui network
 include(../lib/lib.pri)
 include(../rtaudio/rtaudio.pri)
 include(../hapitrip/hapitrip.pri)
