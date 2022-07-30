@@ -6,14 +6,12 @@
 //#define AUDIO_ONLY
 //#define FAKE_STREAMS
 
-#include <rtaudio/RtAudio.h>
+#include <RtAudio.h>
 
 #ifndef AUDIO_ONLY
 #include <QTcpSocket>
-//#include <QThread>
 #include <QHostInfo>
 #include <QUdpSocket>
-//#include <QMutexLocker>
 #include <QTimer>
 #include <QElapsedTimer>
 

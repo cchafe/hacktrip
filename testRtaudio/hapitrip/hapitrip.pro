@@ -2,6 +2,19 @@ QT -= gui
 QT += network
 include(../rtaudio/rtaudio.pri)
 
+# build needs environment set
+# export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+# or equiv in Projects : Build : Environment
+# in ../rtaudio
+# ./autogen.sh
+# make, make install
+# and needs
+# QMAKE_LFLAGS += '-Wl,-rpath,\'\$//usr/local/lib\''
+#CONFIG += link_pkgconfig
+#PKGCONFIG += rtaudio
+#QMAKE_LFLAGS += '-Wl,-rpath,\'\$//usr/local/lib\''
+
+
 TEMPLATE = lib
 DEFINES += HAPITRIP_LIBRARY
 

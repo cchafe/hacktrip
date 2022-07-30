@@ -8,8 +8,6 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-//    RtAudio m_adac;
-//    m_adac.getDeviceCount();
     ht = nullptr;
 }
 

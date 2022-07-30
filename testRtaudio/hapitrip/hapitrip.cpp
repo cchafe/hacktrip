@@ -240,31 +240,35 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer,
 void Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds
     m_streamTimePrintTime = 1.0; // seconds
-    m_adac = new RtAudio();
+    m_adac = new RtAudio(RtAudio::UNIX_JACK);
+//    m_adac = new RtAudio();
+m_adac->showWarnings(true);
     if (m_adac->getDeviceCount() < 1) {
         std::cout << "\nNo audio devices found!\n";
         exit(1);
+    } else {
+        std::cout << "\naudio devices found =\n" << m_adac->getDeviceCount() << "\n" ;
     }
     m_channels = Hapitrip::mChannels;
     m_fs = Hapitrip::mSampleRate;
     m_iDevice = m_oDevice = 0;
     m_iOffset = m_oOffset = 0; // first channel
     // copy all setup into all stream info
-    m_iParams.deviceId = m_iDevice;
+    m_iParams.deviceId = m_adac->getDefaultInputDevice();
     m_iParams.nChannels = m_channels;
     m_iParams.firstChannel = m_iOffset;
-    m_oParams.deviceId = m_oDevice;
+    m_oParams.deviceId = m_adac->getDefaultOutputDevice();
     m_oParams.nChannels = m_channels;
     m_oParams.firstChannel = m_oOffset;
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME;
     options.numberOfBuffers = Hapitrip::mNumberOfBuffersSuggestionToRtAudio; // Windows DirectSound, Linux OSS, and Linux Alsa APIs only.
     // value set by the user is replaced during execution of the RtAudio::openStream() function by the value actually used by the system
+
     std::cout << "using default audio interface device\n";
-    std::cout << m_adac->getDeviceInfo(m_iDevice).name
+    std::cout << m_adac->getDeviceInfo(m_iParams.deviceId).name
               << "\tfor input and output\n";
     std::cout << "\tIf another is needed, either change your settings\n";
     std::cout << "\tor the choice in the code\n";
-    m_adac->showWarnings(true);
     unsigned int bufferFrames = Hapitrip::mFPP;
 #ifndef AUDIO_ONLY
     if (m_adac->openStream( &m_oParams, &m_iParams, FORMAT, Hapitrip::mSampleRate,

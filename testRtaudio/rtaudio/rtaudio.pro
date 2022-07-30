@@ -19,9 +19,10 @@ HEADERS += ../../rtaudio/RtAudio.h \
     ../../rtaudio/include/soundcard.h
 SOURCES += ../../rtaudio/RtAudio.cpp
 
-#QMAKE_CXXFLAGS += -D__LINUX_JACK__
+#cc from rtaudio/Makefile after rtaudio/autogen.sh default =
+# -D__LINUX_ALSA__ -D__LINUX_PULSE__ -D__UNIX_JACK__
 linux-g++ | linux-g++-64 {
-  QMAKE_CXXFLAGS += -D__LINUX_PULSE__ -D__LINUX_ALSA__
+  QMAKE_CXXFLAGS += -D__LINUX_ALSA__ -D__UNIX_JACK__
 }
 macx {
   QMAKE_CXXFLAGS += -D__MACOSX_CORE__
