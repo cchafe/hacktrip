@@ -29,7 +29,7 @@ macx {
 }
 win32 {
   QMAKE_CXXFLAGS += -D__WINDOWS_ASIO__ -D__WINDOWS_WASAPI__
-  INCLUDEPATH += include
+  INCLUDEPATH += ../../rtaudio/include
   HEADERS += ../../rtaudio/include/asio.h \
              ../../rtaudio/include/asiodrivers.h \
              ../../rtaudio/include/asiolist.h \

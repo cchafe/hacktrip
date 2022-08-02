@@ -43,7 +43,7 @@ int TCP::connectToServer()
     connectToHost(serverHostAddress,Hapitrip::mServerTcpPort);
     waitForConnected(Hapitrip::mSocketWaitMs);
     int peerUdpPort = 0;
-    char* port_buf = new char[sizeof(u_int32_t)];
+    char* port_buf = new char[sizeof(uint32_t)];
     if (state()==QTcpSocket::ConnectedState) {
         QByteArray ba;
         qint32 tmp = Hapitrip::mLocalAudioUdpPort;
@@ -51,7 +51,7 @@ int TCP::connectToServer()
         write(ba);
         waitForBytesWritten(1500);
         waitForReadyRead();
-        read(port_buf, sizeof(u_int32_t));
+        read(port_buf, sizeof(uint32_t));
         peerUdpPort = qFromLittleEndian<qint32>(port_buf);
         std::cout << "TCP: ephemeral port = " << peerUdpPort << std::endl;
     } else
