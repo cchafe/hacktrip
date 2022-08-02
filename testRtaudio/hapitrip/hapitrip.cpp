@@ -240,8 +240,8 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer,
 void Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds
     m_streamTimePrintTime = 1.0; // seconds
-    m_adac = new RtAudio(RtAudio::UNIX_JACK);
-//    m_adac = new RtAudio();
+//    m_adac = new RtAudio(RtAudio::UNIX_JACK);
+    m_adac = new RtAudio();
 m_adac->showWarnings(true);
     if (m_adac->getDeviceCount() < 1) {
         std::cout << "\nNo audio devices found!\n";
