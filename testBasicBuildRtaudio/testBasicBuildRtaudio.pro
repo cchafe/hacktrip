@@ -22,3 +22,10 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../rtaudio/release/ -lrtaudio
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../rtaudio/debug/ -lrtaudio
+else:unix: LIBS += -L$$PWD/../rtaudio/ -lrtaudio
+
+INCLUDEPATH += $$PWD/../rtaudio
+DEPENDPATH += $$PWD/../rtaudio
