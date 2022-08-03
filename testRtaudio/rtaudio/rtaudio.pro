@@ -1,13 +1,8 @@
-# created by Marcin Pączkowski
-# configuration for building RtAudio library using qmake
-
-QT -= gui
-
 TEMPLATE = lib
 DEFINES += RTAUDIO_LIBRARY
 
-CONFIG += c++17
-CONFIG += debug_and_release staticlib
+#CONFIG += c++17
+#CONFIG += debug_and_release staticlib
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -28,29 +23,23 @@ macx {
   QMAKE_CXXFLAGS += -D__MACOSX_CORE__
 }
 win32 {
-  QMAKE_CXXFLAGS += -D__WINDOWS_ASIO__ -D__WINDOWS_WASAPI__
-  INCLUDEPATH += ../../rtaudio/include
-  HEADERS += ../../rtaudio/include/asio.h \
-             ../../rtaudio/include/asiodrivers.h \
-             ../../rtaudio/include/asiolist.h \
-             ../../rtaudio/include/asiodrvr.h \
-             ../../rtaudio/include/asiosys.h \
-             ../../rtaudio/include/ginclude.h \
-             ../../rtaudio/include/iasiodrv.h \
-             ../../rtaudio/include/iasiothiscallresolver.h \
-             ../../rtaudio/include/functiondiscoverykeys_devpkey.h
-  SOURCES += ../../rtaudio/include/asio.cpp \
-             ../../rtaudio/include/asiodrivers.cpp \
-             ../../rtaudio/include/asiolist.cpp \
-             ../../rtaudio/include/iasiothiscallresolver.cpp
-}
+              QMAKE_CXXFLAGS += -D__WINDOWS_WASAPI__
+HEADERS +=   include/asio.h \
+              include/asiodrivers.h \
+              include/asiodrvr.h \
+              include/asiolist.h \
+              include/functiondiscoverykeys_devpkey.h \
+              include/ginclude.h \
+              include/iasiodrv.h \
+              include/iasiothiscallresolver.h \
+              include/asiosys.h
+SOURCES += include/asio.cpp \
+              include/asiodrivers.cpp \
+              include/asiolist.cpp \
+              include/iasiothiscallresolver.cpp
 
-# Default rules for deployment.
-#unix {
-#    target.path = /usr/lib
-#}
-#!isEmpty(target.path): INSTALLS += target
-
+LIBS += -lOle32 -ldsound -lmfplat -lmfuuid \
+                 -lksuser -lwmcodecdspuuid -lwinmm}
 DISTFILES += \
     include/asioinfo.txt \
     rtaudio.pri
