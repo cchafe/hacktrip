@@ -5,3 +5,4 @@ SUBDIRS += \
     hapitrip \
     lib \
     rtaudio
+
