@@ -3,11 +3,10 @@
 
 #include "lib_global.h"
 
-class LIB_EXPORT Lib
-{
+class LIB_EXPORT Lib {
 public:
-    Lib();
-    void hi();
+  Lib();
+  void hi();
 };
 
 #endif // LIB_H

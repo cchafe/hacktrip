@@ -1,10 +1,5 @@
 #include "lib.h"
 #include <iostream>
-Lib::Lib()
-{
-}
+Lib::Lib() {}
 
-void Lib::hi()
-{
-    std::cout << "hi\n";
-}
+void Lib::hi() { std::cout << "hi\n"; }
