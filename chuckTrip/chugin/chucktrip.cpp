@@ -29,7 +29,7 @@ public:
     chucktrip(float fs)
     {
         m_fs = fs;
-        setFreq(1440);
+        setFreq(440);
         fprintf(stderr,"xxxxxxxxxxxxxxxxxx  %g\n",fs);
         m_x = 1;
         m_y = 0;
@@ -54,6 +54,7 @@ public:
     {
         m_freq = f;
         m_epsilon = 2.0*sin(2.0*ONE_PI*(m_freq/m_fs)/2.0);
+        fprintf(stderr,"xxxxxxxx  %g\n",f);
         return m_freq;
     }
 
