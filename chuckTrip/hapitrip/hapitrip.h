@@ -4,7 +4,8 @@
 #include "hapitrip_global.h"
 
 //#define AUDIO_ONLY
-//#define FAKE_STREAMS
+#define FAKE_STREAMS
+//#define FAKE_STREAMS_TIMER
 #define NO_AUDIO
 #ifndef NO_AUDIO
 #include <RtAudio.h>
@@ -84,12 +85,12 @@ private:
   QElapsedTimer mRcvTmer;
   QTimer mRcvTimeout;
   TestAudio *mTest;
+  int8_t* fakeAudioBuf;
 public slots:
   void readPendingDatagrams();
   void rcvTimeout();
 #ifdef FAKE_STREAMS
   void sendDummyData();
-
 private:
   QTimer mSendTmer;
 #endif
@@ -146,7 +147,7 @@ public:
   void run();
   void stop();
   int getFPP() { return mFPP; }
-  void sampleToBufSend( double doubleSamp, int sampleCount, int ch ) {};
+  void sendBuf() { mUdp.sendDummyData(); }
 
 private:
   static const int mSampleRate = 48000;

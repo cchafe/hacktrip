@@ -1,4 +1,5 @@
 // run from /home/cc/hacktrip/chuckTrip/ck
+// export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/chuckTrip/hapitrip/
 //chuck --chugin-path:../chugin/ --srate:48000 test.ck 
 //chuck --chugin-path:../chugin/ --srate:48000 --verbose:5 test.ck
 

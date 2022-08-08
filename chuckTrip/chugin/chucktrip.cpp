@@ -55,10 +55,11 @@ public:
         m_sampleCount %= m_FPP;
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
-        ht.sampleToBufSend( m_y, m_sampleCount, 0 );
         m_sampleCount++;
+//        fprintf(stderr,"m_sampleCount  %d\n",m_sampleCount);
         if (m_sampleCount==m_FPP) {
-            fprintf(stderr,"xxx  %d\n",m_FPP);
+            fprintf(stderr,"buf  %d\n",m_FPP);
+            ht.sendBuf();
         }
         return m_y;
     }
