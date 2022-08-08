@@ -8,7 +8,7 @@ dac.gain(0.05);
 1::second => now;
 
 ct.freq(100.0);
-<<<ct.freq()>>>;
+<<<ct.fpp()>>>;
 
 while (true) {
   10::ms => now;

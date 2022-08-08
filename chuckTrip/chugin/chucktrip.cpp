@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <math.h>
 //#include "tcp.h"
+#include "../hapitrip/hapitrip.h"
 
 CK_DLL_CTOR(chucktrip_ctor);
 CK_DLL_DTOR(chucktrip_dtor);
@@ -18,6 +19,8 @@ CK_DLL_MFUN(chucktrip_getFreq);
 
 CK_DLL_TICK(chucktrip_tick);
 CK_DLL_MFUN(chucktrip_connect);
+
+CK_DLL_MFUN(chucktrip_getFPP);
 
 t_CKINT chucktrip_data_offset = 0;
 
@@ -34,6 +37,7 @@ public:
         m_x = 1;
         m_y = 0;
 //        tcp = new TCP();
+        m_FPP = ht.getFPP();
     }
 
     t_CKFLOAT connect()
@@ -62,12 +66,18 @@ public:
         return m_freq;
     }
 
+    t_CKINT getFPP() {
+        return m_FPP;
+    }
+
 private:
 //TCP * tcp;
     SAMPLE m_x, m_y;
     t_CKFLOAT m_fs;
     t_CKFLOAT m_freq;
     t_CKFLOAT m_epsilon;
+    t_CKINT m_FPP;
+    Hapitrip ht;
 };
 
 CK_DLL_QUERY(chucktrip)
@@ -92,6 +102,9 @@ CK_DLL_QUERY(chucktrip)
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
     QUERY->add_mfun(QUERY, chucktrip_connect, "void", "connect");
+
+    QUERY->add_mfun(QUERY, chucktrip_getFPP, "int", "fpp");
+    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
     chucktrip_data_offset = QUERY->add_mvar(QUERY, "int", "@chucktrip_data", false);
     
@@ -147,4 +160,10 @@ CK_DLL_MFUN(chucktrip_connect)
 {
     chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
     RETURN->v_float = bcdata->connect();
+}
+
+CK_DLL_MFUN(chucktrip_getFPP)
+{
+    chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
+    RETURN->v_int = bcdata->getFPP();
 }

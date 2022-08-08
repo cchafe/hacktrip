@@ -2,28 +2,37 @@
 
 #include <QtEndian>
 #include <math.h>
+#include <iostream>
 
 void Hapitrip::connect() {
 #ifndef AUDIO_ONLY
   mUdp.setPeerUdpPort(mTcp.connectToServer());
   mUdp.setTest(Hapitrip::mChannels);
+#ifndef NO_AUDIO
   mAudio.setUdp(&mUdp);
 #endif
+#endif
+#ifndef NO_AUDIO
   mAudio.setTest(Hapitrip::mChannels);
+#endif
 }
 
 void Hapitrip::run() {
 #ifndef AUDIO_ONLY
   mUdp.start();
 #endif
+#ifndef NO_AUDIO
   mAudio.start();
+#endif
 }
 
 void Hapitrip::stop() {
 #ifndef AUDIO_ONLY
   mUdp.stop();
 #endif
+#ifndef NO_AUDIO
   mAudio.stop();
+#endif
 }
 
 #ifndef AUDIO_ONLY
@@ -183,6 +192,7 @@ void UDP::readPendingDatagrams() {
   }
 }
 
+#ifndef NO_AUDIO
 int UDP::audioCallback(void *outputBuffer, void *inputBuffer,
                        unsigned int /* nBufferFrames */,
                        double /* streamTime */,
@@ -212,6 +222,7 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer,
   return static_cast<UDP *>(arg)->audioCallback(
       outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
 }
+#endif
 #else
 
 int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
@@ -237,6 +248,7 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer,
 }
 #endif
 
+#ifndef NO_AUDIO
 void Audio::start() {
   m_streamTimePrintIncrement = 1.0; // seconds
   m_streamTimePrintTime = 1.0;      // seconds
@@ -320,6 +332,7 @@ void Audio::stop() {
       }
     }
 }
+#endif
 
 TestAudio::TestAudio(int channels) { mPhasor.resize(channels, 0.0); }
 

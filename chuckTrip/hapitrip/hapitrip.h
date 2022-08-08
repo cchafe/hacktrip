@@ -5,8 +5,10 @@
 
 //#define AUDIO_ONLY
 //#define FAKE_STREAMS
-
+#define NO_AUDIO
+#ifndef NO_AUDIO
 #include <RtAudio.h>
+#endif
 
 #ifndef AUDIO_ONLY
 #include <QElapsedTimer>
@@ -60,10 +62,11 @@ public:
   void setTest(int channels) { mTest = new TestAudio(channels); }
   void stop();
   void send(int8_t *audioBuf);
+#ifndef NO_AUDIO
   int audioCallback(void *outputBuffer, void *inputBuffer,
                     unsigned int nBufferFrames, double streamTime,
                     RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
-
+#endif
 private:
   //    QMutex mMutex;                     ///< Mutex to protect read and write
   //    operations
@@ -98,7 +101,8 @@ public:
 };
 #endif
 
-class Audio {
+#ifndef NO_AUDIO
+ Audio {
 public:
   void start();
   void stop();
@@ -134,12 +138,14 @@ private:
   UDP *mUdp;
 #endif
 };
+#endif
 
 class HAPITRIP_EXPORT Hapitrip {
 public:
   void connect();
   void run();
   void stop();
+  int getFPP() { return mFPP; }
 
 private:
   static const int mSampleRate = 48000;
@@ -171,7 +177,9 @@ private:
   TCP mTcp;
   UDP mUdp;
 #endif
+#ifndef NO_AUDIO
   Audio mAudio;
+#endif
 };
 
 #endif // HAPITRIP_H
