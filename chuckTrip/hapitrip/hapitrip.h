@@ -146,6 +146,7 @@ public:
   void run();
   void stop();
   int getFPP() { return mFPP; }
+  void sampleToBufSend( double doubleSamp, int sampleCount, int ch ) {};
 
 private:
   static const int mSampleRate = 48000;

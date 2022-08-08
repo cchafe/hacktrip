@@ -38,20 +38,28 @@ public:
         m_y = 0;
 //        tcp = new TCP();
         m_FPP = ht.getFPP();
+        m_sampleCount = 0;
     }
 
     t_CKFLOAT connect()
     {
 //      tcp->connectToHost();
         ht.connect();
+        ht.run();
 //      if (tcp->socket->waitForConnected(1000)) fprintf(stderr,"Connected to server\n");
       return(0.0);
     }
 
     SAMPLE tick(SAMPLE in)
     {
+        m_sampleCount %= m_FPP;
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
+        ht.sampleToBufSend( m_y, m_sampleCount, 0 );
+        m_sampleCount++;
+        if (m_sampleCount==m_FPP) {
+            fprintf(stderr,"xxx  %d\n",m_FPP);
+        }
         return m_y;
     }
     
@@ -79,6 +87,7 @@ private:
     t_CKFLOAT m_epsilon;
     t_CKINT m_FPP;
     Hapitrip ht;
+    t_CKINT m_sampleCount;
 };
 
 CK_DLL_QUERY(chucktrip)
