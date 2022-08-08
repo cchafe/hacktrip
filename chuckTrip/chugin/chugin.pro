@@ -1,7 +1,7 @@
 QT -= gui
 QT += core network
-include(../rtaudio/rtaudio.pri)
-include(../hapitrip/hapitrip.pri)
+#include(../rtaudio/rtaudio.pri)
+#include(../hapitrip/hapitrip.pri)
 
 CONFIG += c++17 console
 CONFIG -= app_bundle
@@ -13,11 +13,9 @@ TARGET = chucktrip.chug
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-SOURCES += chucktrip.cpp \
-    tcp.cpp
+SOURCES += chucktrip.cpp
 
-HEADERS += \
-    tcp.h
+HEADERS +=
 
 INCLUDEPATH += .
 INCLUDEPATH += chuck/include/

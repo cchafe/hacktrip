@@ -1,15 +1,16 @@
-//chuck --chugin-path:../qt/ssr/ --srate:48000 ssr.ck 
+// run from /home/cc/hacktrip/chuckTrip/ck
+//chuck --chugin-path:../chugin/ --srate:48000 test.ck 
+//chuck --chugin-path:../chugin/ --srate:48000 --verbose:5 test.ck
 
-ssr s => dac;
+chucktrip ct => dac;
 dac.gain(0.05);
-s.connect();
+// ct.connect();
 1::second => now;
 
-s.freq(100.0);
-<<<s.freq()>>>;
+ct.freq(100.0);
+<<<ct.freq()>>>;
 
 while (true) {
   10::ms => now;
-  <<<s.checkConnection()>>>;
 }
 1::hour => now;
