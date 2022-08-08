@@ -43,6 +43,7 @@ public:
     t_CKFLOAT connect()
     {
 //      tcp->connectToHost();
+        ht.connect();
 //      if (tcp->socket->waitForConnected(1000)) fprintf(stderr,"Connected to server\n");
       return(0.0);
     }

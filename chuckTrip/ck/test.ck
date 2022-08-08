@@ -4,7 +4,7 @@
 
 chucktrip ct => dac;
 dac.gain(0.05);
-// ct.connect();
+ct.connect();
 1::second => now;
 
 ct.freq(100.0);
