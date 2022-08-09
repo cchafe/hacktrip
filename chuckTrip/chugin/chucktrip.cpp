@@ -36,26 +36,38 @@ public:
         m_x = 1;
         m_y = 0;
         m_FPP = ht.getFPP();
+        _buffer = new float[m_FPP]; // from pitchtrack chugin
+        for (int i = 0; i < m_FPP; i++)
+        {
+            _buffer[i] = 0.0;
+        }
         m_sampleCount = 0;
+    }
+    ~chucktrip ()
+    {
+        free(_buffer);
     }
 
     t_CKFLOAT connect()
     {
         ht.connect();
         ht.run();
-      return(0.0);
+        return(0.0);
     }
 
     SAMPLE tick(SAMPLE in)
     {
         m_sampleCount %= m_FPP;
+//        _buffer[m_sampleCount] = in;
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
+        _buffer[m_sampleCount] = m_y;
         m_sampleCount++;
-//        fprintf(stderr,"m_sampleCount  %d\n",m_sampleCount);
+        //        fprintf(stderr,"m_sampleCount  %d\n",m_sampleCount);
         if (m_sampleCount==m_FPP) {
-//            fprintf(stderr,"buf  %d\n",m_FPP);
-            ht.sendBuf();
+            //            fprintf(stderr,"buf  %d\n",m_FPP);
+//            _helmholtz->iosamples(_buffer, _null_buffer, _frame);
+            ht.sendBuf(_buffer);
         }
         return m_y;
     }
@@ -84,6 +96,7 @@ private:
     t_CKINT m_FPP;
     Hapitrip ht;
     t_CKINT m_sampleCount;
+    float *_buffer;
 };
 
 CK_DLL_QUERY(chucktrip)
@@ -92,8 +105,8 @@ CK_DLL_QUERY(chucktrip)
     
     QUERY->begin_class(QUERY, "chucktrip", "UGen");
     QUERY->doc_class(QUERY, "Fast, recursive sine wave generator using the so-called &quot;magic circle&quot; algorithm (see <a href=\"https://ccrma.stanford.edu/~jos/pasp/Digital_Sinusoid_Generators.html\">https://ccrma.stanford.edu/~jos/pasp/Digital_Sinusoid_Generators.html</a>). "
-        "Can be 30-40% faster than regular SinOsc. "
-        "Frequency modulation will negate this performance benefit; most useful when pure sine tones are desired or for additive synthesis. ");
+                            "Can be 30-40% faster than regular SinOsc. "
+                            "Frequency modulation will negate this performance benefit; most useful when pure sine tones are desired or for additive synthesis. ");
     
     QUERY->add_ctor(QUERY, chucktrip_ctor);
     QUERY->add_dtor(QUERY, chucktrip_dtor);

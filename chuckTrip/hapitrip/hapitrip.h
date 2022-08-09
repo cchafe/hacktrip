@@ -89,7 +89,7 @@ public slots:
   void readPendingDatagrams();
   void rcvTimeout();
 #ifdef FAKE_STREAMS
-  void sendDummyData();
+  void sendDummyData(float *buf);
 private:
   QTimer mSendTmer;
 #endif
@@ -146,7 +146,7 @@ public:
   void run();
   void stop();
   int getFPP() { return mFPP; }
-  void sendBuf() { mUdp.sendDummyData(); }
+  void sendBuf(float *buf) { mUdp.sendDummyData(buf); }
 
 private:
   static const int mSampleRate = 48000;

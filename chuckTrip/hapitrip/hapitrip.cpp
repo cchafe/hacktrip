@@ -136,7 +136,7 @@ void UDP::rcvTimeout() {
 }
 
 #ifdef FAKE_STREAMS
-void UDP::sendDummyData() {
+void UDP::sendDummyData(float *buf) {
 
     //    fakeAudioBuf.resize(Hapitrip::mAudioDataLen);
     //    fakeAudioBuf.fill('\0', Hapitrip::mAudioDataLen); // char fill
@@ -144,7 +144,15 @@ void UDP::sendDummyData() {
 
     int8_t *fakeAudioBuf = new int8_t[Hapitrip::mAudioDataLen];
     memset(fakeAudioBuf, 0, Hapitrip::mAudioDataLen);
-//        mTest->sineTest((MY_TYPE *)fakeAudioBuf);
+    //        mTest->sineTest((MY_TYPE *)fakeAudioBuf);
+
+    MY_TYPE * tmp = (MY_TYPE *)fakeAudioBuf;
+    for (int ch = 0; ch < 1; ch++) {
+        for (int i = 0; i < Hapitrip::mFPP; i++) {
+            *tmp++ = (MY_TYPE)(buf[i] * Hapitrip::mScale);
+        }
+    }
+
     send(fakeAudioBuf);
 }
 #endif
