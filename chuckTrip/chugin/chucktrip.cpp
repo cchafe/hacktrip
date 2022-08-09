@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
-//#include "tcp.h"
 #include "../hapitrip/hapitrip.h"
 
 CK_DLL_CTOR(chucktrip_ctor);
@@ -36,17 +35,14 @@ public:
         fprintf(stderr,"xxxxxxxxxxxxxxxxxx  %g\n",fs);
         m_x = 1;
         m_y = 0;
-//        tcp = new TCP();
         m_FPP = ht.getFPP();
         m_sampleCount = 0;
     }
 
     t_CKFLOAT connect()
     {
-//      tcp->connectToHost();
         ht.connect();
         ht.run();
-//      if (tcp->socket->waitForConnected(1000)) fprintf(stderr,"Connected to server\n");
       return(0.0);
     }
 
@@ -58,7 +54,7 @@ public:
         m_sampleCount++;
 //        fprintf(stderr,"m_sampleCount  %d\n",m_sampleCount);
         if (m_sampleCount==m_FPP) {
-            fprintf(stderr,"buf  %d\n",m_FPP);
+//            fprintf(stderr,"buf  %d\n",m_FPP);
             ht.sendBuf();
         }
         return m_y;
@@ -81,7 +77,6 @@ public:
     }
 
 private:
-//TCP * tcp;
     SAMPLE m_x, m_y;
     t_CKFLOAT m_fs;
     t_CKFLOAT m_freq;

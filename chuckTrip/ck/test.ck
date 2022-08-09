@@ -7,9 +7,8 @@ chucktrip ct => dac;
 dac.gain(0.05);
 ct.connect();
 1::second => now;
-
 ct.freq(100.0);
-<<<ct.fpp()>>>;
+// <<<ct.fpp()>>>;
 
 while (true) {
   10::ms => now;
