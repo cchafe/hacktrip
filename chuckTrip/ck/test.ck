@@ -4,13 +4,19 @@
 //chuck --chugin-path:../chugin/ --srate:48000 --verbose:5 test.ck
 
 chucktrip ct => dac;
+SinOsc sin => ct;
+sin.freq(1000.0);
+sin.gain(0.05);
 dac.gain(0.05);
 ct.connect();
-1::second => now;
-ct.freq(100.0);
-// <<<ct.fpp()>>>;
+ct.freq(1000.0);
 
 while (true) {
-  10::ms => now;
+1::second => now;
+ct.disconnect();
+ct.freq(100.0);
+1::second => now;
+ct.connect();
+ct.freq(1000.0);
 }
 1::hour => now;

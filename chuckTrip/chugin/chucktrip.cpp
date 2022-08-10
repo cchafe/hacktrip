@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <math.h>
 #include "../hapitrip/hapitrip.h"
+#include <iostream>
 
 CK_DLL_CTOR(chucktrip_ctor);
 CK_DLL_DTOR(chucktrip_dtor);
@@ -18,6 +19,7 @@ CK_DLL_MFUN(chucktrip_getFreq);
 
 CK_DLL_TICK(chucktrip_tick);
 CK_DLL_MFUN(chucktrip_connect);
+CK_DLL_MFUN(chucktrip_disconnect);
 
 CK_DLL_MFUN(chucktrip_getFPP);
 
@@ -43,8 +45,11 @@ public:
         }
         m_sampleCount = 0;
     }
+
     ~chucktrip ()
     {
+        fprintf(stderr,"chucktrip dtor \n");
+        std::cout << "chucktrip: " << std::endl;
         free(_buffer);
     }
 
@@ -55,15 +60,20 @@ public:
         return(0.0);
     }
 
+    t_CKFLOAT disconnect()
+    {
+        ht.stop();
+        return(0.0);
+    }
+
     SAMPLE tick(SAMPLE in)
     {
         m_sampleCount %= m_FPP;
-//        _buffer[m_sampleCount] = in;
+        _buffer[m_sampleCount] = in;
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
-        _buffer[m_sampleCount] = m_y;
+//        _buffer[m_sampleCount] = m_y;
         m_sampleCount++;
-        //        fprintf(stderr,"m_sampleCount  %d\n",m_sampleCount);
         if (m_sampleCount==m_FPP) {
             //            fprintf(stderr,"buf  %d\n",m_FPP);
 //            _helmholtz->iosamples(_buffer, _null_buffer, _frame);
@@ -121,6 +131,7 @@ CK_DLL_QUERY(chucktrip)
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
     QUERY->add_mfun(QUERY, chucktrip_connect, "void", "connect");
+    QUERY->add_mfun(QUERY, chucktrip_disconnect, "void", "disconnect");
 
     QUERY->add_mfun(QUERY, chucktrip_getFPP, "int", "fpp");
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
@@ -144,6 +155,7 @@ CK_DLL_CTOR(chucktrip_ctor)
 
 CK_DLL_DTOR(chucktrip_dtor)
 {
+    std::cout << "chucktrip: !!" << std::endl;
     chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
     if(bcdata)
     {
@@ -179,6 +191,12 @@ CK_DLL_MFUN(chucktrip_connect)
 {
     chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
     RETURN->v_float = bcdata->connect();
+}
+
+CK_DLL_MFUN(chucktrip_disconnect)
+{
+    chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
+    RETURN->v_float = bcdata->disconnect();
 }
 
 CK_DLL_MFUN(chucktrip_getFPP)

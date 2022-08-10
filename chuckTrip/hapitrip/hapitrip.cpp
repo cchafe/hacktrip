@@ -6,10 +6,13 @@
 
 void Hapitrip::connect() {
 #ifndef AUDIO_ONLY
-    mUdp.setPeerUdpPort(mTcp.connectToServer());
-    mUdp.setTest(Hapitrip::mChannels);
+    mTcp = new TCP();
+    mUdp = new UDP();
+    mUdp->setPeerUdpPort(mTcp->connectToServer());
+    delete mTcp;
+    mUdp->setTest(Hapitrip::mChannels);
 #ifndef NO_AUDIO
-    mAudio.setUdp(&mUdp);
+    mAudio.setUdp(mUdp);
 #endif
 #endif
 #ifndef NO_AUDIO
@@ -19,20 +22,26 @@ void Hapitrip::connect() {
 
 void Hapitrip::run() {
 #ifndef AUDIO_ONLY
-    mUdp.start();
+    mUdp->start();
 #endif
 #ifndef NO_AUDIO
     mAudio.start();
 #endif
 }
 
+void Hapitrip::sendBuf(float *buf) {
+    if (mUdp != nullptr) mUdp->sendDummyData(buf);
+}
+
 void Hapitrip::stop() {
 #ifndef AUDIO_ONLY
-    mUdp.stop();
+    mUdp->stop();
 #endif
 #ifndef NO_AUDIO
     mAudio.stop();
 #endif
+    delete mUdp;
+    mUdp = nullptr;
 }
 
 #ifndef AUDIO_ONLY
@@ -131,6 +140,11 @@ void UDP::start() {
 #endif
 };
 
+UDP::~UDP() {
+    for (int i = 0; i < mRing; i++) delete mRingBuffer[i];
+    delete mTmpAudioBuf;
+}
+
 void UDP::rcvTimeout() {
     std::cout << "rcv: ms since last packet = "
               << (double)mRcvTmer.nsecsElapsed() / 1000000.0 << std::endl;
@@ -158,7 +172,7 @@ void UDP::send(int8_t *audioBuf) {
         std::cout << "UDP send: packet = " << mSendSeq << std::endl;
     mSendSeq++;
     mSendSeq %= 65536;
-    std::cout << "\nsineTest " << mSendSeq << std::endl;
+//    std::cout << "\nsineTest " << mSendSeq << std::endl;
 }
 
 void UDP::stop() {
@@ -176,6 +190,7 @@ void UDP::stop() {
     stopBuf.fill(0xff, Hapitrip::mExitPacketSize);
     writeDatagram(stopBuf, serverHostAddress, mPeerUdpPort);
     writeDatagram(stopBuf, serverHostAddress, mPeerUdpPort);
+    waitForBytesWritten();
     close(); // stop rcv
 }
 

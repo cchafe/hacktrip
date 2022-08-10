@@ -58,6 +58,7 @@ public:
 
 class UDP : public QUdpSocket {
 public:
+    ~UDP();
   void start();
   void setPeerUdpPort(int port) { mPeerUdpPort = port; }
   void setTest(int channels) { mTest = new TestAudio(channels); }
@@ -92,7 +93,7 @@ public slots:
   void sendDummyData(float *buf);
 private:
   QTimer mSendTmer;
-  int8_t *tmpAudioBuf;
+  int8_t *mTmpAudioBuf;
 #endif
 };
 
@@ -147,7 +148,7 @@ public:
   void run();
   void stop();
   int getFPP() { return mFPP; }
-  void sendBuf(float *buf) { mUdp.sendDummyData(buf); }
+  void sendBuf(float *buf);
 
 private:
   static const int mSampleRate = 48000;
@@ -176,8 +177,8 @@ private:
 #ifndef AUDIO_ONLY
   friend class TCP;
   friend class UDP;
-  TCP mTcp;
-  UDP mUdp;
+  TCP * mTcp;
+  UDP * mUdp;
 #endif
 #ifndef NO_AUDIO
   Audio mAudio;
