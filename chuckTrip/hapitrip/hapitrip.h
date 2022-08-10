@@ -92,6 +92,7 @@ public slots:
   void sendDummyData(float *buf);
 private:
   QTimer mSendTmer;
+  int8_t *tmpAudioBuf;
 #endif
 };
 

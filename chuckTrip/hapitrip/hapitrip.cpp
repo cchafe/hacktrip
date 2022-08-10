@@ -123,6 +123,8 @@ void UDP::start() {
     }
     mSendSeq = 0;
     mRcvTmer.start();
+    mTmpAudioBuf = new int8_t[Hapitrip::mAudioDataLen];
+    memset(mTmpAudioBuf, 0, Hapitrip::mAudioDataLen);
 #ifdef FAKE_STREAMS_TIMER
     connect(&mSendTmer, &QTimer::timeout, this, &UDP::sendDummyData);
     mSendTmer.start(Hapitrip::mPacketPeriodMS);
@@ -137,23 +139,13 @@ void UDP::rcvTimeout() {
 
 #ifdef FAKE_STREAMS
 void UDP::sendDummyData(float *buf) {
-
-    //    fakeAudioBuf.resize(Hapitrip::mAudioDataLen);
-    //    fakeAudioBuf.fill('\0', Hapitrip::mAudioDataLen); // char fill
-    //  std::cout << "fakeAudioBuf: 1023 = " << fakeAudioBuf.at(1023) << std::endl;
-
-    int8_t *fakeAudioBuf = new int8_t[Hapitrip::mAudioDataLen];
-    memset(fakeAudioBuf, 0, Hapitrip::mAudioDataLen);
-    //        mTest->sineTest((MY_TYPE *)fakeAudioBuf);
-
-    MY_TYPE * tmp = (MY_TYPE *)fakeAudioBuf;
+    MY_TYPE * tmp = (MY_TYPE *)mTmpAudioBuf;
     for (int ch = 0; ch < 1; ch++) {
         for (int i = 0; i < Hapitrip::mFPP; i++) {
             *tmp++ = (MY_TYPE)(buf[i] * Hapitrip::mScale);
         }
     }
-
-    send(fakeAudioBuf);
+    send(mTmpAudioBuf);
 }
 #endif
 
