@@ -1,6 +1,5 @@
 QT -= gui
 QT += core network
-#include(../rtaudio/rtaudio.pri)
 include(../hapitrip/hapitrip.pri)
 
 CONFIG += c++17 console

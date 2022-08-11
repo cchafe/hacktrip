@@ -3,12 +3,14 @@
 
 #include "hapitrip_global.h"
 
-//#define AUDIO_ONLY
+////#define AUDIO_ONLY
+
 #define FAKE_STREAMS
-//#define FAKE_STREAMS_TIMER
+////#define FAKE_STREAMS_TIMER
 #define NO_AUDIO
 #ifndef NO_AUDIO
 #include <RtAudio.h>
+//#include <../../rtaudio/RtAudio.h>
 #endif
 
 #ifndef AUDIO_ONLY
@@ -57,6 +59,7 @@ public:
 };
 
 class UDP : public QUdpSocket {
+Q_OBJECT
 public:
     ~UDP();
   void start();
@@ -91,6 +94,7 @@ public slots:
   void rcvTimeout();
 #ifdef FAKE_STREAMS
   void sendDummyData(float *buf);
+  void rcvDummyData(float *buf);
 private:
   QTimer mSendTmer;
   int8_t *mTmpAudioBuf;
@@ -104,7 +108,7 @@ public:
 #endif
 
 #ifndef NO_AUDIO
- Audio {
+class Audio {
 public:
   void start();
   void stop();
@@ -148,7 +152,7 @@ public:
   void run();
   void stop();
   int getFPP() { return mFPP; }
-  void sendBuf(float *buf);
+  void xfrBufs(float *sendBuf, float *rcvBuf);
 
 private:
   static const int mSampleRate = 48000;

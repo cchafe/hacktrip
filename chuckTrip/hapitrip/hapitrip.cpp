@@ -1,8 +1,10 @@
 #include "hapitrip.h"
 
 #include <QtEndian>
+#include <asm-generic/socket.h>
 #include <math.h>
 #include <iostream>
+#include <sys/socket.h>
 
 void Hapitrip::connect() {
 #ifndef AUDIO_ONLY
@@ -29,8 +31,13 @@ void Hapitrip::run() {
 #endif
 }
 
-void Hapitrip::sendBuf(float *buf) {
-    if (mUdp != nullptr) mUdp->sendDummyData(buf);
+void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) {
+#ifdef FAKE_STREAMS
+    if (mUdp != nullptr) {
+        mUdp->sendDummyData(sendBuf);
+        mUdp->rcvDummyData(rcvBuf);
+    }
+#endif
 }
 
 void Hapitrip::stop() {
@@ -87,6 +94,10 @@ int TCP::connectToServer() {
     return peerUdpPort;
 }
 
+// show udp port in use
+// sudo lsof -i:4464
+// sudo lsof -i -P -n
+// sudo watch ss -tulpn
 void UDP::start() {
     mHeader.TimeStamp = (uint64_t)0;
     mHeader.SeqNumber = (uint16_t)0;
@@ -110,16 +121,25 @@ void UDP::start() {
             serverHostAddress = info.addresses().constFirst();
         }
     }
-    //    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    //    int optval = 1;
-    //    setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
-    //               (void *) &optval, sizeof(optval));
-    //    setSocketDescriptor(sockfd, QUdpSocket::UnconnectedState);
+
+    /*
+     * https://forum.qt.io/topic/90687/how-to-set-so_reuseport-option-for-qudpsocket/3
+     * So I did it using Berkeley sockets. I'm using Linux, the same code might work with WinSock, if not something trivially similar will. The following code creates a QUdpSocket, provides it with a low-level socket descriptor that has been set for SO_REUSEPORT, then binds it to port 34567:
+QUdpSocket *sock = new QUdpSocket;
+int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+int optval = 1;
+setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
+              (void *) &optval, sizeof(optval));
+sock->setSocketDescriptor(sockfd, QUdpSocket::UnconnectedState);
+sock->bind(34567, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+     */
     int ret = 0;
     ret = bind(Hapitrip::mLocalAudioUdpPort);
+//    ret = bind();
     std::cout << "UDP: start send = " << ret << " "
               << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
     connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams);
+    std::cout << this->state()  << " readPendingDatagrams = "<< QUdpSocket::BoundState << std::endl;
     connect(&mRcvTimeout, &QTimer::timeout, this, &UDP::rcvTimeout);
     mRing = Hapitrip::mRingBufferLength;
     mWptr = mRing / 2;
@@ -132,8 +152,10 @@ void UDP::start() {
     }
     mSendSeq = 0;
     mRcvTmer.start();
+#ifdef FAKE_STREAMS
     mTmpAudioBuf = new int8_t[Hapitrip::mAudioDataLen];
     memset(mTmpAudioBuf, 0, Hapitrip::mAudioDataLen);
+#endif
 #ifdef FAKE_STREAMS_TIMER
     connect(&mSendTmer, &QTimer::timeout, this, &UDP::sendDummyData);
     mSendTmer.start(Hapitrip::mPacketPeriodMS);
@@ -142,7 +164,9 @@ void UDP::start() {
 
 UDP::~UDP() {
     for (int i = 0; i < mRing; i++) delete mRingBuffer[i];
+#ifdef FAKE_STREAMS
     delete mTmpAudioBuf;
+#endif
 }
 
 void UDP::rcvTimeout() {
@@ -161,6 +185,25 @@ void UDP::sendDummyData(float *buf) {
     }
     send(mTmpAudioBuf);
 }
+
+void UDP::rcvDummyData(float *buf) {
+    readPendingDatagrams();
+    if (mRptr == mWptr)
+        mRptr = mRing / 2;
+    mRptr %= mRing;
+    memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::mAudioDataLen);
+    mRptr++;
+
+    MY_TYPE * tmp1 = (MY_TYPE *)mTmpAudioBuf;
+    float * tmp2 = (float *)buf;
+
+    for (int ch = 0; ch < 1; ch++) {
+        for (int i = 0; i < Hapitrip::mFPP; i++) {
+            tmp2[i] = tmp1[i] * Hapitrip::mInvScale;
+        }
+    }
+}
+
 #endif
 
 void UDP::send(int8_t *audioBuf) {
@@ -200,8 +243,8 @@ void UDP::readPendingDatagrams() {
     // previous datagrams are read
     //     QMutexLocker locker(&mMutex);
 
-    mRcvTmer.start();
-    mRcvTimeout.start(Hapitrip::mTimeoutMS);
+//    mRcvTmer.start();
+//    mRcvTimeout.start(Hapitrip::mTimeoutMS);
     while (hasPendingDatagrams()) {
         int size = pendingDatagramSize();
         if (size == Hapitrip::mExitPacketSize)

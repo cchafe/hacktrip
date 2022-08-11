@@ -8,7 +8,8 @@
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
-#include "../hapitrip/hapitrip.h"
+
+#include "hapitrip.h"
 #include <iostream>
 
 CK_DLL_CTOR(chucktrip_ctor);
@@ -37,49 +38,53 @@ public:
         fprintf(stderr,"xxxxxxxxxxxxxxxxxx  %g\n",fs);
         m_x = 1;
         m_y = 0;
-        m_FPP = ht.getFPP();
-        _buffer = new float[m_FPP]; // from pitchtrack chugin
+        m_FPP = ht->getFPP();
+        m_sendBuffer = new float[m_FPP]; // garnered from pitchtrack chugin
+        m_rcvBuffer = new float[m_FPP];
         for (int i = 0; i < m_FPP; i++)
         {
-            _buffer[i] = 0.0;
+            m_sendBuffer[i] = 0.0;
+            m_rcvBuffer[i] = 0.0;
         }
         m_sampleCount = 0;
     }
 
     ~chucktrip ()
     {
-        fprintf(stderr,"chucktrip dtor \n");
-        std::cout << "chucktrip: " << std::endl;
-        free(_buffer);
+        fprintf(stderr,"chucktrip dtor reached!! \n");
+        std::cout << "chucktrip: I'd be surprised if this ever prints" << std::endl;
+        free(m_sendBuffer);
+        free(m_rcvBuffer);
     }
 
     t_CKFLOAT connect()
     {
-        ht.connect();
-        ht.run();
+        ht = new Hapitrip();
+        ht->connect();
+        ht->run();
         return(0.0);
     }
 
     t_CKFLOAT disconnect()
     {
-        ht.stop();
+        ht->stop();
         return(0.0);
     }
 
     SAMPLE tick(SAMPLE in)
     {
         m_sampleCount %= m_FPP;
-        _buffer[m_sampleCount] = in;
+        m_sendBuffer[m_sampleCount] = in;
+        t_CKFLOAT out = m_rcvBuffer[m_sampleCount];
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
-//        _buffer[m_sampleCount] = m_y;
+//        m_sendBuffer[m_sampleCount] = m_y;
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {
-            //            fprintf(stderr,"buf  %d\n",m_FPP);
-//            _helmholtz->iosamples(_buffer, _null_buffer, _frame);
-            ht.sendBuf(_buffer);
+//                        fprintf(stderr,"buf  %d\n",m_FPP);
+            ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
         }
-        return m_y;
+        return out;
     }
     
     t_CKFLOAT setFreq(t_CKFLOAT f)
@@ -104,9 +109,10 @@ private:
     t_CKFLOAT m_freq;
     t_CKFLOAT m_epsilon;
     t_CKINT m_FPP;
-    Hapitrip ht;
+    Hapitrip *ht;
     t_CKINT m_sampleCount;
-    float *_buffer;
+    float *m_sendBuffer;
+    float *m_rcvBuffer;
 };
 
 CK_DLL_QUERY(chucktrip)
