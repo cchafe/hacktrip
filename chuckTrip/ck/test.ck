@@ -5,9 +5,9 @@
 
 chucktrip ct => dac;
 // => dac;
-//SinOsc sin => ct;
-//sin.freq(900.0);
-//sin.gain(0.05);
+SinOsc sin => ct;
+sin.freq(900.0);
+sin.gain(0.02);
 dac.gain(0.5);
 ct.connect();
 ct.freq(1000.0);

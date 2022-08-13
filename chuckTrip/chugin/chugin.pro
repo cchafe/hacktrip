@@ -1,6 +1,7 @@
 QT -= gui
 QT += core network
 include(../hapitrip/hapitrip.pri)
+#include(../coreApp/coreApp.pri)
 
 CONFIG += c++17 console
 CONFIG -= app_bundle

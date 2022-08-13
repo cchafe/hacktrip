@@ -6,7 +6,7 @@
 ////#define AUDIO_ONLY
 
 #define FAKE_STREAMS
-////#define FAKE_STREAMS_TIMER
+#define FAKE_STREAMS_TIMER
 #define NO_AUDIO
 #ifndef NO_AUDIO
 #include <RtAudio.h>
@@ -58,7 +58,7 @@ public:
       NumOutgoingChannelsToNet; ///< Number of outgoing Channels to the network
 };
 
-class UDP : public QUdpSocket {
+class UDP : public QUdpSocket  {
 Q_OBJECT
 public:
     ~UDP();
@@ -87,11 +87,11 @@ private:
   QByteArray mBufRcv;
   int mSendSeq;
   QElapsedTimer mRcvTmer;
-  QTimer mRcvTimeout;
+  QElapsedTimer mRcvTimeout;
   TestAudio *mTest;
 public slots:
   void readPendingDatagrams();
-  void rcvTimeout();
+  void rcvTimeout(bool restart);
 #ifdef FAKE_STREAMS
   void sendDummyData(float *buf);
   void rcvDummyData(float *buf);
@@ -99,6 +99,8 @@ private:
   QTimer mSendTmer;
   int8_t *mTmpAudioBuf;
 #endif
+signals:
+  void signalHi();
 };
 
 class TCP : public QTcpSocket {
@@ -146,9 +148,10 @@ private:
 };
 #endif
 
-class HAPITRIP_EXPORT Hapitrip {
+class HAPITRIP_EXPORT Hapitrip : public QObject {
+    Q_OBJECT
 public:
-  void connect();
+  void connectToServer();
   void run();
   void stop();
   int getFPP() { return mFPP; }
@@ -187,6 +190,8 @@ private:
 #ifndef NO_AUDIO
   Audio mAudio;
 #endif
+private slots:
+  void hi();
 };
 
 #endif // HAPITRIP_H

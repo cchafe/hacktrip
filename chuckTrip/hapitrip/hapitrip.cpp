@@ -4,9 +4,14 @@
 #include <asm-generic/socket.h>
 #include <math.h>
 #include <iostream>
-#include <sys/socket.h>
+#include <ios>
+#include <iomanip>
 
-void Hapitrip::connect() {
+void Hapitrip::hi() {
+    std::cout << " !!!!!!!!!!!!!!!!!!! " << std::endl;
+}
+
+void Hapitrip::connectToServer() {
 #ifndef AUDIO_ONLY
     mTcp = new TCP();
     mUdp = new UDP();
@@ -56,14 +61,13 @@ int TCP::connectToServer() {
     QHostAddress serverHostAddress;
 
     if (!serverHostAddress.setAddress(gServer)) {
-        std::cout << "\nthings are ok (despite qt bug related to QHostInfo::fromName)..." << std::endl;
+        std::cout << "\nno running Qt event loop but things are ok..." << std::endl;
         QHostInfo info = QHostInfo::fromName(gServer);
         std::cout << "...ignore all that\n" << std::endl;
 
-        // the line above works but has a bug in the chugin port where it prints
+        // the line above works but QHostInfo::fromName needs event loop and prints
         //        QObject::connect(QObject, QThreadPool): invalid nullptr parameter
         //        QObject::connect(QObject, Unknown): invalid nullptr parameter
-        // no obvious workaround
 
         if (!info.addresses().isEmpty()) {
             // use the first IP address
@@ -71,9 +75,9 @@ int TCP::connectToServer() {
         }
     }
 
-//    std::cout << "TCP: serverHostAddress = "
-//              << serverHostAddress.toString().toStdString()
-//              << std::endl;
+    //    std::cout << "TCP: serverHostAddress = "
+    //              << serverHostAddress.toString().toStdString()
+    //              << std::endl;
     connectToHost(serverHostAddress, Hapitrip::mServerTcpPort);
     waitForConnected(Hapitrip::mSocketWaitMs);
     int peerUdpPort = 0;
@@ -99,6 +103,7 @@ int TCP::connectToServer() {
 // sudo lsof -i -P -n
 // sudo watch ss -tulpn
 void UDP::start() {
+    emit signalHi();
     mHeader.TimeStamp = (uint64_t)0;
     mHeader.SeqNumber = (uint16_t)0;
     mHeader.BufferSize = (uint16_t)Hapitrip::mFPP;
@@ -134,13 +139,12 @@ sock->setSocketDescriptor(sockfd, QUdpSocket::UnconnectedState);
 sock->bind(34567, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
      */
     int ret = 0;
+    connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams);
     ret = bind(Hapitrip::mLocalAudioUdpPort);
-//    ret = bind();
     std::cout << "UDP: start send = " << ret << " "
               << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
-    connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams);
-    std::cout << this->state()  << " readPendingDatagrams = "<< QUdpSocket::BoundState << std::endl;
-    connect(&mRcvTimeout, &QTimer::timeout, this, &UDP::rcvTimeout);
+//    std::cout << this->state()  << " readPendingDatagrams = "<< QUdpSocket::BoundState << std::endl;
+    //    connect(&mRcvTimeout, &QTimer::timeout, this, &UDP::rcvTimeout);
     mRing = Hapitrip::mRingBufferLength;
     mWptr = mRing / 2;
     mRptr = 0;
@@ -157,8 +161,8 @@ sock->bind(34567, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     memset(mTmpAudioBuf, 0, Hapitrip::mAudioDataLen);
 #endif
 #ifdef FAKE_STREAMS_TIMER
-    connect(&mSendTmer, &QTimer::timeout, this, &UDP::sendDummyData);
-    mSendTmer.start(Hapitrip::mPacketPeriodMS);
+    //    connect(&mSendTmer, &QTimer::timeout, this, &UDP::sendDummyData);
+    //    mSendTmer.start(Hapitrip::mPacketPeriodMS);
 #endif
 };
 
@@ -169,10 +173,21 @@ UDP::~UDP() {
 #endif
 }
 
-void UDP::rcvTimeout() {
-    std::cout << "rcv: ms since last packet = "
-              << (double)mRcvTmer.nsecsElapsed() / 1000000.0 << std::endl;
-    mRcvTimeout.start();
+void UDP::rcvTimeout(bool restart) {
+    double elapsed = (double)mRcvTimeout.nsecsElapsed() / 1000000.0;
+    double delta = (double)elapsed-(double)Hapitrip::mPacketPeriodMS;
+    if (restart) mRcvTimeout.start();
+    else if (delta > 0.0) {
+        std::cout.setf(std::ios::showpoint);
+        std::cout   << std::setprecision(4) << std::setw(4);
+        std::cout   << elapsed
+                    << " (ms)   nominal = "
+                    << Hapitrip::mPacketPeriodMS
+                    << ""
+                    << "   delta = "
+                    << delta
+                    << std::endl;
+    }
 }
 
 #ifdef FAKE_STREAMS
@@ -215,16 +230,16 @@ void UDP::send(int8_t *audioBuf) {
         std::cout << "UDP send: packet = " << mSendSeq << std::endl;
     mSendSeq++;
     mSendSeq %= 65536;
-//    std::cout << "\nsineTest " << mSendSeq << std::endl;
+    //    std::cout << "\nsineTest " << mSendSeq << std::endl;
 }
 
 void UDP::stop() {
 #ifdef FAKE_STREAMS_TIMER
-    disconnect(&mSendTmer, &QTimer::timeout, this, &UDP::sendDummyData);
+    //    disconnect(&mSendTmer, &QTimer::timeout, this, &UDP::sendDummyData);
     mSendTmer.stop();
 #endif
-    disconnect(&mRcvTimeout, &QTimer::timeout, this, &UDP::rcvTimeout);
-    mRcvTimeout.stop();
+    //    disconnect(&mRcvTimeout, &QTimer::timeout, this, &UDP::rcvTimeout);
+    //    mRcvTimeout.stop();
     disconnect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams);
     // Send exit packet (with 1 redundant packet).
     std::cout << "sending exit packet" << std::endl;
@@ -243,9 +258,10 @@ void UDP::readPendingDatagrams() {
     // previous datagrams are read
     //     QMutexLocker locker(&mMutex);
 
-//    mRcvTmer.start();
-//    mRcvTimeout.start(Hapitrip::mTimeoutMS);
+    mRcvTmer.start();
+    if (!hasPendingDatagrams()) rcvTimeout(false);
     while (hasPendingDatagrams()) {
+        rcvTimeout(true);
         int size = pendingDatagramSize();
         if (size == Hapitrip::mExitPacketSize)
             stop();

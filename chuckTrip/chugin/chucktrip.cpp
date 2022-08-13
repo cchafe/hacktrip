@@ -11,6 +11,7 @@
 
 #include "hapitrip.h"
 #include <iostream>
+#include "coreApp.h"
 
 CK_DLL_CTOR(chucktrip_ctor);
 CK_DLL_DTOR(chucktrip_dtor);
@@ -26,7 +27,6 @@ CK_DLL_MFUN(chucktrip_getFPP);
 
 t_CKINT chucktrip_data_offset = 0;
 
-
 class chucktrip
 {
 public:
@@ -34,8 +34,7 @@ public:
     chucktrip(float fs)
     {
         m_fs = fs;
-        setFreq(440);
-        fprintf(stderr,"xxxxxxxxxxxxxxxxxx  %g\n",fs);
+        setFreq(440); // internal magic sine
         m_x = 1;
         m_y = 0;
         m_FPP = ht->getFPP();
@@ -60,9 +59,9 @@ public:
     t_CKFLOAT connect()
     {
         ht = new Hapitrip();
-        ht->connect();
+        ht->connectToServer();
         ht->run();
-        return(0.0);
+         return(0.0);
     }
 
     t_CKFLOAT disconnect()
@@ -78,10 +77,9 @@ public:
         t_CKFLOAT out = m_rcvBuffer[m_sampleCount];
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
-//        m_sendBuffer[m_sampleCount] = m_y;
+//        m_sendBuffer[m_sampleCount] = m_y; // internal magic sine
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {
-//                        fprintf(stderr,"buf  %d\n",m_FPP);
             ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
         }
         return out;
@@ -91,7 +89,6 @@ public:
     {
         m_freq = f;
         m_epsilon = 2.0*sin(2.0*ONE_PI*(m_freq/m_fs)/2.0);
-        fprintf(stderr,"xxxxxxxx  %g\n",f);
         return m_freq;
     }
 
