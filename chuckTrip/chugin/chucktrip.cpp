@@ -11,7 +11,6 @@
 
 #include "hapitrip.h"
 #include <iostream>
-#include "coreApp.h"
 
 CK_DLL_CTOR(chucktrip_ctor);
 CK_DLL_DTOR(chucktrip_dtor);
