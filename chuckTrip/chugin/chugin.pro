@@ -1,6 +1,6 @@
 QT -= gui
 QT += core network
-include(../hapitrip/hapitrip.pri)
+#include(../hapitrip/hapitrip.pri)
 #include(../coreApp/coreApp.pri)
 
 CONFIG += c++17 console
@@ -13,9 +13,12 @@ TARGET = chucktrip.chug
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-SOURCES += chucktrip.cpp
+SOURCES += chucktrip.cpp \
+../hapitrip/hapitrip.cpp
 
-HEADERS +=
+HEADERS += ../hapitrip/hapitrip.h
+INCLUDEPATH += ../hapitrip
+
 
 INCLUDEPATH += .
 INCLUDEPATH += chuck/include/

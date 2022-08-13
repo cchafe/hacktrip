@@ -5,8 +5,9 @@ TEMPLATE = subdirs
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/chuckTrip/coreApp/
 SUBDIRS += \
 #    app \
-    chugin \
-    hapitrip
+    chugin
+#    \
+#    hapitrip
 #    \
 #    coreApp
 #    lib \
