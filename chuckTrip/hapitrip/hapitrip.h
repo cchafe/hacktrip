@@ -21,8 +21,10 @@
 #include <QUdpSocket>
 
 const QString gVersion = "clientV2";
-// const QString gServer = "54.215.249.223";
-const QString gServer = "jackloop256.stanford.edu";
+//const QString gServer = "54.176.88.95"; // cc EC2 but wedged server 14-Aug-2022
+const QString gServer = "54.193.141.93"; // ccTest
+// const QString gServer = "54.176.100.97"; // SF
+//const QString gServer = "jackloop256.stanford.edu";
 // const QString gServer = "cmn55.stanford.edu";
 // const QString gServer = "cmn9.stanford.edu";
 // const QString gServer = "171.64.197.158";
@@ -159,7 +161,7 @@ public:
 
 private:
   static const int mSampleRate = 48000;
-  static const int mFPP = 256;
+  static const int mFPP = 128;
   static const int mChannels = 2;
   static const int mBytesPerSample = sizeof(MY_TYPE);
   static const int mAudioDataLen = mFPP * mChannels * mBytesPerSample;
