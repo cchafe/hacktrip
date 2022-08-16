@@ -21,9 +21,11 @@
 #include <QUdpSocket>
 
 const QString gVersion = "clientV2";
-//const QString gServer = "54.176.88.95"; // cc EC2 but wedged server 14-Aug-2022
-const QString gServer = "54.193.141.93"; // ccTest
-// const QString gServer = "54.176.100.97"; // SF
+//const QString gServer = "3.101.24.143"; // cc EC2 new IP 15-Aug-2022
+//const QString gServer = "54.153.79.243"; // ccTest
+//const QString gServer = "54.176.100.97"; // SF
+const QString gServer = "35.178.52.65"; // London
+
 //const QString gServer = "jackloop256.stanford.edu";
 // const QString gServer = "cmn55.stanford.edu";
 // const QString gServer = "cmn9.stanford.edu";
@@ -101,8 +103,6 @@ private:
   QTimer mSendTmer;
   int8_t *mTmpAudioBuf;
 #endif
-signals:
-  void signalHi();
 };
 
 class TCP : public QTcpSocket {
@@ -162,7 +162,7 @@ public:
 private:
   static const int mSampleRate = 48000;
   static const int mFPP = 128;
-  static const int mChannels = 2;
+  static const int mChannels = 1;
   static const int mBytesPerSample = sizeof(MY_TYPE);
   static const int mAudioDataLen = mFPP * mChannels * mBytesPerSample;
   constexpr static const double mScale = 32767.0;
@@ -192,8 +192,6 @@ private:
 #ifndef NO_AUDIO
   Audio mAudio;
 #endif
-private slots:
-  void hi();
 };
 
 #endif // HAPITRIP_H

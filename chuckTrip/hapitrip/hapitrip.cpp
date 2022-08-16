@@ -7,10 +7,6 @@
 #include <ios>
 #include <iomanip>
 
-void Hapitrip::hi() {
-    std::cout << " !!!!!!!!!!!!!!!!!!! " << std::endl;
-}
-
 void Hapitrip::connectToServer() {
 #ifndef AUDIO_ONLY
     mTcp = new TCP();
@@ -103,7 +99,6 @@ int TCP::connectToServer() {
 // sudo lsof -i -P -n
 // sudo watch ss -tulpn
 void UDP::start() {
-    emit signalHi();
     mHeader.TimeStamp = (uint64_t)0;
     mHeader.SeqNumber = (uint16_t)0;
     mHeader.BufferSize = (uint16_t)Hapitrip::mFPP;
@@ -147,7 +142,7 @@ sock->bind(34567, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     //    connect(&mRcvTimeout, &QTimer::timeout, this, &UDP::rcvTimeout);
     mRing = Hapitrip::mRingBufferLength;
     mWptr = mRing / 2;
-    mRptr = 0;
+    mRptr = mWptr - 2;
     for (int i = 0; i < mRing; i++) {
         int8_t *tmp = new int8_t[Hapitrip::mAudioDataLen];
         for (int j = 0; j < Hapitrip::mAudioDataLen; j++)
@@ -204,7 +199,8 @@ void UDP::sendDummyData(float *buf) {
 void UDP::rcvDummyData(float *buf) {
     readPendingDatagrams();
     if (mRptr == mWptr)
-        mRptr = mRing / 2;
+        mRptr = mWptr - 2;
+    if (mRptr<0) mRptr += mRing;
     mRptr %= mRing;
     memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::mAudioDataLen);
     mRptr++;
@@ -226,6 +222,7 @@ void UDP::send(int8_t *audioBuf) {
     memcpy(mBufSend.data(), &mHeader, sizeof(HeaderStruct));
     memcpy(mBufSend.data() + sizeof(HeaderStruct), audioBuf, Hapitrip::mAudioDataLen);
     writeDatagram(mBufSend, serverHostAddress, mPeerUdpPort);
+//    waitForBytesWritten();
     if (mSendSeq % Hapitrip::mReportAfterPackets == 0)
         std::cout << "UDP send: packet = " << mSendSeq << std::endl;
     mSendSeq++;
@@ -275,7 +272,7 @@ void UDP::readPendingDatagrams() {
         if (rcvSeq % Hapitrip::mReportAfterPackets == 0)
             std::cout << "UDP rcv: seq = " << rcvSeq << std::endl;
         int8_t *audioBuf = (int8_t *)(mBufRcv.data() + sizeof(HeaderStruct));
-        //            mTest->sineTest((MY_TYPE *)audioBuf); // output sines
+//                    mTest->sineTest((MY_TYPE *)audioBuf); // output sines
         //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio
         //            signal
         memcpy(mRingBuffer[mWptr], audioBuf, Hapitrip::mAudioDataLen);
