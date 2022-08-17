@@ -55,12 +55,13 @@ public:
         free(m_rcvBuffer);
     }
 
-    t_CKFLOAT connect()
+    t_CKFLOAT connect(char *filename)
     {
+        fprintf(stderr,"%s",filename);
         ht = new Hapitrip();
-        ht->connectToServer();
+        ht->connectToServer(filename);
         ht->run();
-         return(0.0);
+        return(0.0);
     }
 
     t_CKFLOAT disconnect()
@@ -76,7 +77,7 @@ public:
         t_CKFLOAT out = m_rcvBuffer[m_sampleCount];
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
-//        m_sendBuffer[m_sampleCount] = m_y; // internal magic sine
+        //        m_sendBuffer[m_sampleCount] = m_y; // internal magic sine
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {
             ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
@@ -99,6 +100,7 @@ public:
         return m_FPP;
     }
 
+    char * m_server;
 private:
     SAMPLE m_x, m_y;
     t_CKFLOAT m_fs;
@@ -133,6 +135,9 @@ CK_DLL_QUERY(chucktrip)
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
     QUERY->add_mfun(QUERY, chucktrip_connect, "void", "connect");
+    QUERY->add_arg(QUERY, "string", "name" );
+    QUERY->doc_func(QUERY, "Server name. ");
+
     QUERY->add_mfun(QUERY, chucktrip_disconnect, "void", "disconnect");
 
     QUERY->add_mfun(QUERY, chucktrip_getFPP, "int", "fpp");
@@ -192,7 +197,9 @@ CK_DLL_MFUN(chucktrip_getFreq)
 CK_DLL_MFUN(chucktrip_connect)
 {
     chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
-    RETURN->v_float = bcdata->connect();
+    bcdata->m_server = (char *)GET_NEXT_STRING(ARGS)->c_str();
+    RETURN->v_float = bcdata->connect(bcdata->m_server);
+    //    RETURN->v_float = bcdata->connect((char *)GET_NEXT_STRING(ARGS)->c_str());
 }
 
 CK_DLL_MFUN(chucktrip_disconnect)

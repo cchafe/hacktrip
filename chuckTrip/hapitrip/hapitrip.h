@@ -67,6 +67,7 @@ Q_OBJECT
 public:
     ~UDP();
   void start();
+  void setPeer(QString peer) { mServer = peer; }
   void setPeerUdpPort(int port) { mPeerUdpPort = port; }
   void setTest(int channels) { mTest = new TestAudio(channels); }
   void stop();
@@ -102,12 +103,13 @@ public slots:
 private:
   QTimer mSendTmer;
   int8_t *mTmpAudioBuf;
+  QString mServer;
 #endif
 };
 
 class TCP : public QTcpSocket {
 public:
-  int connectToServer();
+  int connectToServer(QString server);
 };
 #endif
 
@@ -153,7 +155,7 @@ private:
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
-  void connectToServer();
+  void connectToServer(QString server);
   void run();
   void stop();
   int getFPP() { return mFPP; }
@@ -180,6 +182,7 @@ private:
       (1000.0 / (double)(mSampleRate / mFPP));
   static const int mRingBufferLength = 50;
   static const int mReportAfterPackets = 500;
+  QString mServer;
 #endif
   friend class Audio;
   friend class TestAudio;

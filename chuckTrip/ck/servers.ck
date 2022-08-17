@@ -26,14 +26,17 @@ fun void dj () {
 }
 //spork ~dj();
 
-ct.connect();
+["35.178.52.65","54.176.100.97"] @=> string servers[];
+0 => int server;
+ct.connect(servers[server]);
+server++;
 
 while (true) {
 5::second => now;
 ct.disconnect();
 ct.gain(0.0);
 2::second => now;
-ct.connect();
+ct.connect(servers[server]);
 ct.gain(1.0);
 }
 1::hour => now;

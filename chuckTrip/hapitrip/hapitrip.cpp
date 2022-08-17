@@ -7,11 +7,13 @@
 #include <ios>
 #include <iomanip>
 
-void Hapitrip::connectToServer() {
+void Hapitrip::connectToServer(QString server) {
+    mServer = server;
 #ifndef AUDIO_ONLY
     mTcp = new TCP();
     mUdp = new UDP();
-    mUdp->setPeerUdpPort(mTcp->connectToServer());
+    mUdp->setPeer(mServer);
+    mUdp->setPeerUdpPort(mTcp->connectToServer(mServer));
     delete mTcp;
     mUdp->setTest(Hapitrip::mChannels);
 #ifndef NO_AUDIO
@@ -53,12 +55,11 @@ void Hapitrip::stop() {
 }
 
 #ifndef AUDIO_ONLY
-int TCP::connectToServer() {
+int TCP::connectToServer(QString server) {
     QHostAddress serverHostAddress;
-
-    if (!serverHostAddress.setAddress(gServer)) {
+    if (!serverHostAddress.setAddress(server)) {
         std::cout << "\nno running Qt event loop but things are ok..." << std::endl;
-        QHostInfo info = QHostInfo::fromName(gServer);
+        QHostInfo info = QHostInfo::fromName(server);
         std::cout << "...ignore all that\n" << std::endl;
 
         // the line above works but QHostInfo::fromName needs event loop and prints
@@ -114,8 +115,8 @@ void UDP::start() {
     mBufRcv.fill(0, packetDataLen);
     memcpy(mBufRcv.data(), &mHeader, sizeof(HeaderStruct));
 
-    if (!serverHostAddress.setAddress(gServer)) {
-        QHostInfo info = QHostInfo::fromName(gServer);
+    if (!serverHostAddress.setAddress(mServer)) {
+        QHostInfo info = QHostInfo::fromName(mServer);
         if (!info.addresses().isEmpty()) {
             // use the first IP address
             serverHostAddress = info.addresses().constFirst();
