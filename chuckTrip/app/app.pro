@@ -1,5 +1,5 @@
 QT       += core gui network
-include(../lib/lib.pri)
+#include(../lib/lib.pri)
 include(../rtaudio/rtaudio.pri)
 include(../hapitrip/hapitrip.pri)
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets

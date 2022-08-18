@@ -4,12 +4,20 @@ TEMPLATE = subdirs
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/chuckTrip/hapitrip/
 #export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/chuckTrip/coreApp/
 SUBDIRS += \
-#    app \
     chugin
-#    \
-#    hapitrip
-#    \
-#    coreApp
-#    lib \
+
+# to build app
+#SUBDIRS += \
+#    app   \
+##    chugin
+##    \
+#    hapitrip  \
+##    coreApp
+##    lib \
 #    rtaudio
+
+#and
+#//#define NO_AUDIO
+#in hapitrip.h
+
 

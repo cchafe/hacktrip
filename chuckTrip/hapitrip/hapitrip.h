@@ -10,7 +10,6 @@
 #define NO_AUDIO
 #ifndef NO_AUDIO
 #include <RtAudio.h>
-//#include <../../rtaudio/RtAudio.h>
 #endif
 
 #ifndef AUDIO_ONLY
@@ -24,7 +23,7 @@ const QString gVersion = "clientV2";
 //const QString gServer = "3.101.24.143"; // cc EC2 new IP 15-Aug-2022
 //const QString gServer = "54.153.79.243"; // ccTest
 //const QString gServer = "54.176.100.97"; // SF
-const QString gServer = "35.178.52.65"; // London
+//const QString gServer = "35.178.52.65"; // London
 
 //const QString gServer = "jackloop256.stanford.edu";
 // const QString gServer = "cmn55.stanford.edu";
@@ -109,7 +108,7 @@ private:
 
 class TCP : public QTcpSocket {
 public:
-  int connectToServer(QString server);
+  int connectToServer();
 };
 #endif
 
@@ -152,38 +151,74 @@ private:
 };
 #endif
 
+class APIsettings {
+
+    static const int dSampleRate = 48000;
+    static const int dFPP = 128;
+    static const int dChannels = 1;
+    static const int dBytesPerSample = sizeof(MY_TYPE);
+    static const int dAudioDataLen = dFPP * dChannels * dBytesPerSample;
+    constexpr static const double dScale = 32767.0;
+    constexpr static const double dInvScale = 1.0 / 32767.0;
+    static const int dNumberOfBuffersSuggestionToRtAudio = 2;
+    #ifndef AUDIO_ONLY
+    static const int dServerTcpPort = 4464;
+    static const int dLocalAudioUdpPort = 4464;
+    static const int dSocketWaitMs = 1500;
+    static const int dBufferQueueLength =
+        3; // queue not used for localhost testing
+    static const int dExitPacketSize = 63;
+    static const int dTimeoutMS = 1000;
+    constexpr static const double dPacketPeriodMS =
+        (1000.0 / (double)(dSampleRate / dFPP));
+    static const int dRingBufferLength = 50;
+    static const int dReportAfterPackets = 500;
+    static const bool dVerbose = 0;
+#endif
+
+private:
+    int sampleRate = dSampleRate;
+    int FPP = dFPP;
+    int channels = dChannels;
+    int bytesPerSample = dBytesPerSample;
+    int audioDataLen = dAudioDataLen;
+    double scale = dScale;
+    double invScale = dInvScale;
+    int numberOfBuffersSuggestionToRtAudio = dNumberOfBuffersSuggestionToRtAudio;
+    #ifndef AUDIO_ONLY
+    int serverTcpPort = dServerTcpPort;
+    int localAudioUdpPort = dLocalAudioUdpPort;
+    int socketWaitMs = dSocketWaitMs;
+    int bufferQueueLength = dBufferQueueLength;
+    int exitPacketSize = dExitPacketSize;
+    int timeoutMS = dTimeoutMS;
+    double packetPeriodMS = dPacketPeriodMS;
+    int ringBufferLength = dRingBufferLength;
+    int reportAfterPackets = dReportAfterPackets;
+    bool verbose = dVerbose;
+
+    QString server = NULL;
+    friend class TCP;
+    friend class UDP;
+#endif
+    friend class Audio;
+    friend class TestAudio;
+    friend class Hapitrip;
+};
+
+
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
   void connectToServer(QString server);
+  void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; };
   void run();
   void stop();
-  int getFPP() { return mFPP; }
+  int getFPP() { return as.FPP; }
   void xfrBufs(float *sendBuf, float *rcvBuf);
 
 private:
-  static const int mSampleRate = 48000;
-  static const int mFPP = 128;
-  static const int mChannels = 1;
-  static const int mBytesPerSample = sizeof(MY_TYPE);
-  static const int mAudioDataLen = mFPP * mChannels * mBytesPerSample;
-  constexpr static const double mScale = 32767.0;
-  constexpr static const double mInvScale = 1.0 / 32767.0;
-  static const int mNumberOfBuffersSuggestionToRtAudio = 2;
-#ifndef AUDIO_ONLY
-  static const int mServerTcpPort = 4464;
-  static const int mLocalAudioUdpPort = 4464;
-  static const int mSocketWaitMs = 1500;
-  static const int mBufferQueueLength =
-      3; // queue not used for localhost testing
-  static const int mExitPacketSize = 63;
-  static const int mTimeoutMS = 1000;
-  constexpr static const double mPacketPeriodMS =
-      (1000.0 / (double)(mSampleRate / mFPP));
-  static const int mRingBufferLength = 50;
-  static const int mReportAfterPackets = 500;
-  QString mServer;
-#endif
+  static APIsettings as;
   friend class Audio;
   friend class TestAudio;
 #ifndef AUDIO_ONLY

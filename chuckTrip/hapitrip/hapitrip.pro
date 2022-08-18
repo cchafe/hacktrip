@@ -1,6 +1,6 @@
 QT -= gui
 QT += network
-#include(../rtaudio/rtaudio.pri)
+include(../rtaudio/rtaudio.pri)
 #include(../coreApp/coreApp.pri)
 
 # build needs environment set

@@ -22,6 +22,8 @@ CK_DLL_TICK(chucktrip_tick);
 CK_DLL_MFUN(chucktrip_connect);
 CK_DLL_MFUN(chucktrip_disconnect);
 
+CK_DLL_MFUN(chucktrip_setLocalUDPaudioPort);
+
 CK_DLL_MFUN(chucktrip_getFPP);
 
 t_CKINT chucktrip_data_offset = 0;
@@ -57,7 +59,7 @@ public:
 
     t_CKFLOAT connect(char *filename)
     {
-        fprintf(stderr,"%s",filename);
+//        fprintf(stderr,"%s",filename);
         ht = new Hapitrip();
         ht->connectToServer(filename);
         ht->run();
@@ -67,6 +69,12 @@ public:
     t_CKFLOAT disconnect()
     {
         ht->stop();
+        return(0.0);
+    }
+
+    t_CKFLOAT setLocalUDPaudioPort(int port)
+    {
+        ht->setLocalUDPaudioPort(port);
         return(0.0);
     }
 
@@ -140,6 +148,10 @@ CK_DLL_QUERY(chucktrip)
 
     QUERY->add_mfun(QUERY, chucktrip_disconnect, "void", "disconnect");
 
+    QUERY->add_mfun(QUERY, chucktrip_setLocalUDPaudioPort, "int", "localUDPAudioPort");
+    QUERY->add_arg(QUERY, "int", "arg");
+    QUERY->doc_func(QUERY, "LocalUDPaudioPort. ");
+
     QUERY->add_mfun(QUERY, chucktrip_getFPP, "int", "fpp");
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
@@ -206,6 +218,12 @@ CK_DLL_MFUN(chucktrip_disconnect)
 {
     chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
     RETURN->v_float = bcdata->disconnect();
+}
+
+CK_DLL_MFUN(chucktrip_setLocalUDPaudioPort)
+{
+    chucktrip * bcdata = (chucktrip *) OBJ_MEMBER_INT(SELF, chucktrip_data_offset);
+    RETURN->v_float = bcdata->setLocalUDPaudioPort(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_MFUN(chucktrip_getFPP)

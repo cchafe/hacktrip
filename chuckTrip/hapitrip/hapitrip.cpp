@@ -7,21 +7,23 @@
 #include <ios>
 #include <iomanip>
 
+APIsettings Hapitrip::as;
+
 void Hapitrip::connectToServer(QString server) {
-    mServer = server;
+    as.server = server;
 #ifndef AUDIO_ONLY
     mTcp = new TCP();
     mUdp = new UDP();
-    mUdp->setPeer(mServer);
-    mUdp->setPeerUdpPort(mTcp->connectToServer(mServer));
+    mUdp->setPeer(as.server);
+    mUdp->setPeerUdpPort(mTcp->connectToServer());
     delete mTcp;
-    mUdp->setTest(Hapitrip::mChannels);
+    mUdp->setTest(as.channels);
 #ifndef NO_AUDIO
     mAudio.setUdp(mUdp);
 #endif
 #endif
 #ifndef NO_AUDIO
-    mAudio.setTest(Hapitrip::mChannels);
+    mAudio.setTest(as.channels);
 #endif
 }
 
@@ -55,11 +57,11 @@ void Hapitrip::stop() {
 }
 
 #ifndef AUDIO_ONLY
-int TCP::connectToServer(QString server) {
+int TCP::connectToServer() {
     QHostAddress serverHostAddress;
-    if (!serverHostAddress.setAddress(server)) {
+    if (!serverHostAddress.setAddress(Hapitrip::as.server)) {
         std::cout << "\nno running Qt event loop but things are ok..." << std::endl;
-        QHostInfo info = QHostInfo::fromName(server);
+        QHostInfo info = QHostInfo::fromName(Hapitrip::as.server);
         std::cout << "...ignore all that\n" << std::endl;
 
         // the line above works but QHostInfo::fromName needs event loop and prints
@@ -75,20 +77,20 @@ int TCP::connectToServer(QString server) {
     //    std::cout << "TCP: serverHostAddress = "
     //              << serverHostAddress.toString().toStdString()
     //              << std::endl;
-    connectToHost(serverHostAddress, Hapitrip::mServerTcpPort);
-    waitForConnected(Hapitrip::mSocketWaitMs);
+    connectToHost(serverHostAddress, Hapitrip::as.serverTcpPort);
+    waitForConnected(Hapitrip::as.socketWaitMs);
     int peerUdpPort = 0;
     char *port_buf = new char[sizeof(uint32_t)];
     if (state() == QTcpSocket::ConnectedState) {
         QByteArray ba;
-        qint32 tmp = Hapitrip::mLocalAudioUdpPort;
+        qint32 tmp = Hapitrip::as.localAudioUdpPort;
         ba.setNum(tmp);
         write(ba);
         waitForBytesWritten(1500);
         waitForReadyRead();
         read(port_buf, sizeof(uint32_t));
         peerUdpPort = qFromLittleEndian<qint32>(port_buf);
-        std::cout << "TCP: ephemeral port = " << peerUdpPort << std::endl;
+        if (Hapitrip::as.verbose) std::cout << "TCP: ephemeral port = " << peerUdpPort << std::endl;
     } else
         std::cout << "TCP: not connected to server" << std::endl;
     delete[] port_buf;
@@ -102,12 +104,12 @@ int TCP::connectToServer(QString server) {
 void UDP::start() {
     mHeader.TimeStamp = (uint64_t)0;
     mHeader.SeqNumber = (uint16_t)0;
-    mHeader.BufferSize = (uint16_t)Hapitrip::mFPP;
+    mHeader.BufferSize = (uint16_t)Hapitrip::as.FPP;
     mHeader.SamplingRate = (uint8_t)3;
     mHeader.BitResolution = (uint8_t)sizeof(MY_TYPE) * 8; // checked in jacktrip
-    mHeader.NumIncomingChannelsFromNet = Hapitrip::mChannels;
-    mHeader.NumOutgoingChannelsToNet = Hapitrip::mChannels;
-    int packetDataLen = sizeof(HeaderStruct) + Hapitrip::mAudioDataLen;
+    mHeader.NumIncomingChannelsFromNet = Hapitrip::as.channels;
+    mHeader.NumOutgoingChannelsToNet = Hapitrip::as.channels;
+    int packetDataLen = sizeof(HeaderStruct) + Hapitrip::as.audioDataLen;
     mBufSend.resize(packetDataLen);
     mBufSend.fill(0, packetDataLen);
     memcpy(mBufSend.data(), &mHeader, sizeof(HeaderStruct));
@@ -136,25 +138,25 @@ sock->bind(34567, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
      */
     int ret = 0;
     connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams);
-    ret = bind(Hapitrip::mLocalAudioUdpPort);
-    std::cout << "UDP: start send = " << ret << " "
+    ret = bind(Hapitrip::as.localAudioUdpPort);
+    if (Hapitrip::as.verbose) std::cout << "UDP: start send = " << ret << " "
               << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
 //    std::cout << this->state()  << " readPendingDatagrams = "<< QUdpSocket::BoundState << std::endl;
     //    connect(&mRcvTimeout, &QTimer::timeout, this, &UDP::rcvTimeout);
-    mRing = Hapitrip::mRingBufferLength;
+    mRing = Hapitrip::as.ringBufferLength;
     mWptr = mRing / 2;
     mRptr = mWptr - 2;
     for (int i = 0; i < mRing; i++) {
-        int8_t *tmp = new int8_t[Hapitrip::mAudioDataLen];
-        for (int j = 0; j < Hapitrip::mAudioDataLen; j++)
+        int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
+        for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
             tmp[j] = 0;
         mRingBuffer.push_back(tmp);
     }
     mSendSeq = 0;
     mRcvTmer.start();
 #ifdef FAKE_STREAMS
-    mTmpAudioBuf = new int8_t[Hapitrip::mAudioDataLen];
-    memset(mTmpAudioBuf, 0, Hapitrip::mAudioDataLen);
+    mTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen];
+    memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
 #endif
 #ifdef FAKE_STREAMS_TIMER
     //    connect(&mSendTmer, &QTimer::timeout, this, &UDP::sendDummyData);
@@ -171,14 +173,14 @@ UDP::~UDP() {
 
 void UDP::rcvTimeout(bool restart) {
     double elapsed = (double)mRcvTimeout.nsecsElapsed() / 1000000.0;
-    double delta = (double)elapsed-(double)Hapitrip::mPacketPeriodMS;
+    double delta = (double)elapsed-(double)Hapitrip::as.packetPeriodMS;
     if (restart) mRcvTimeout.start();
-    else if (delta > 0.0) {
+    else if (Hapitrip::as.verbose && (delta > 0.0)) {
         std::cout.setf(std::ios::showpoint);
         std::cout   << std::setprecision(4) << std::setw(4);
         std::cout   << elapsed
                     << " (ms)   nominal = "
-                    << Hapitrip::mPacketPeriodMS
+                    << Hapitrip::as.packetPeriodMS
                     << ""
                     << "   delta = "
                     << delta
@@ -190,8 +192,8 @@ void UDP::rcvTimeout(bool restart) {
 void UDP::sendDummyData(float *buf) {
     MY_TYPE * tmp = (MY_TYPE *)mTmpAudioBuf;
     for (int ch = 0; ch < 1; ch++) {
-        for (int i = 0; i < Hapitrip::mFPP; i++) {
-            *tmp++ = (MY_TYPE)(buf[i] * Hapitrip::mScale);
+        for (int i = 0; i < Hapitrip::as.FPP; i++) {
+            *tmp++ = (MY_TYPE)(buf[i] * Hapitrip::as.scale);
         }
     }
     send(mTmpAudioBuf);
@@ -203,15 +205,15 @@ void UDP::rcvDummyData(float *buf) {
         mRptr = mWptr - 2;
     if (mRptr<0) mRptr += mRing;
     mRptr %= mRing;
-    memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::mAudioDataLen);
+    memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen);
     mRptr++;
 
     MY_TYPE * tmp1 = (MY_TYPE *)mTmpAudioBuf;
     float * tmp2 = (float *)buf;
 
     for (int ch = 0; ch < 1; ch++) {
-        for (int i = 0; i < Hapitrip::mFPP; i++) {
-            tmp2[i] = tmp1[i] * Hapitrip::mInvScale;
+        for (int i = 0; i < Hapitrip::as.FPP; i++) {
+            tmp2[i] = tmp1[i] * Hapitrip::as.invScale;
         }
     }
 }
@@ -221,11 +223,11 @@ void UDP::rcvDummyData(float *buf) {
 void UDP::send(int8_t *audioBuf) {
     mHeader.SeqNumber = (uint16_t)mSendSeq;
     memcpy(mBufSend.data(), &mHeader, sizeof(HeaderStruct));
-    memcpy(mBufSend.data() + sizeof(HeaderStruct), audioBuf, Hapitrip::mAudioDataLen);
+    memcpy(mBufSend.data() + sizeof(HeaderStruct), audioBuf, Hapitrip::as.audioDataLen);
     writeDatagram(mBufSend, serverHostAddress, mPeerUdpPort);
 //    waitForBytesWritten();
-    if (mSendSeq % Hapitrip::mReportAfterPackets == 0)
-        std::cout << "UDP send: packet = " << mSendSeq << std::endl;
+    if (mSendSeq % Hapitrip::as.reportAfterPackets == 0)
+     if (Hapitrip::as.verbose)    std::cout << "UDP send: packet = " << mSendSeq << std::endl;
     mSendSeq++;
     mSendSeq %= 65536;
     //    std::cout << "\nsineTest " << mSendSeq << std::endl;
@@ -240,10 +242,10 @@ void UDP::stop() {
     //    mRcvTimeout.stop();
     disconnect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams);
     // Send exit packet (with 1 redundant packet).
-    std::cout << "sending exit packet" << std::endl;
+    if (Hapitrip::as.verbose) std::cout << "sending exit packet" << std::endl;
     QByteArray stopBuf;
-    stopBuf.resize(Hapitrip::mExitPacketSize);
-    stopBuf.fill(0xff, Hapitrip::mExitPacketSize);
+    stopBuf.resize(Hapitrip::as.exitPacketSize);
+    stopBuf.fill(0xff, Hapitrip::as.exitPacketSize);
     writeDatagram(stopBuf, serverHostAddress, mPeerUdpPort);
     writeDatagram(stopBuf, serverHostAddress, mPeerUdpPort);
     waitForBytesWritten();
@@ -261,7 +263,7 @@ void UDP::readPendingDatagrams() {
     while (hasPendingDatagrams()) {
         rcvTimeout(true);
         int size = pendingDatagramSize();
-        if (size == Hapitrip::mExitPacketSize)
+        if (size == Hapitrip::as.exitPacketSize)
             stop();
         QHostAddress sender;
         quint16 senderPort;
@@ -270,13 +272,13 @@ void UDP::readPendingDatagrams() {
         //        std::endl;
         memcpy(&mHeader, mBufRcv.data(), sizeof(HeaderStruct));
         int rcvSeq = mHeader.SeqNumber;
-        if (rcvSeq % Hapitrip::mReportAfterPackets == 0)
-            std::cout << "UDP rcv: seq = " << rcvSeq << std::endl;
+        if (rcvSeq % Hapitrip::as.reportAfterPackets == 0)
+            if (Hapitrip::as.verbose) std::cout << "UDP rcv: seq = " << rcvSeq << std::endl;
         int8_t *audioBuf = (int8_t *)(mBufRcv.data() + sizeof(HeaderStruct));
 //                    mTest->sineTest((MY_TYPE *)audioBuf); // output sines
         //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio
         //            signal
-        memcpy(mRingBuffer[mWptr], audioBuf, Hapitrip::mAudioDataLen);
+        memcpy(mRingBuffer[mWptr], audioBuf, Hapitrip::as.audioDataLen);
         mWptr++;
         mWptr %= mRing;
     }
@@ -295,7 +297,7 @@ int UDP::audioCallback(void *outputBuffer, void *inputBuffer,
         mRptr = mRing / 2;
     //    if (mRptr < 0) mRptr = 0;
     mRptr %= mRing;
-    memcpy(outputBuffer, mRingBuffer[mRptr], Hapitrip::mAudioDataLen);
+    memcpy(outputBuffer, mRingBuffer[mRptr], Hapitrip::as.audioDataLen);
     mRptr++;
 
     // audio diagnostics, modify or print output and input buffers
@@ -358,8 +360,8 @@ void Audio::start() {
         std::cout << "\naudio devices found =\n"
                   << m_adac->getDeviceCount() << "\n";
     }
-    m_channels = Hapitrip::mChannels;
-    m_fs = Hapitrip::mSampleRate;
+    m_channels = Hapitrip::as.channels;
+    m_fs = Hapitrip::as.sampleRate;
     m_iDevice = m_oDevice = 0;
     m_iOffset = m_oOffset = 0; // first channel
     m_adac->showWarnings(true);
@@ -372,7 +374,7 @@ void Audio::start() {
     m_oParams.deviceId = m_adac->getDefaultOutputDevice();
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME;
     options.numberOfBuffers =
-            Hapitrip::mNumberOfBuffersSuggestionToRtAudio; // Windows DirectSound,
+            Hapitrip::as.numberOfBuffersSuggestionToRtAudio; // Windows DirectSound,
     // Linux OSS, and Linux
     // Alsa APIs only.
     // value set by the user is replaced during execution of the
@@ -383,9 +385,9 @@ void Audio::start() {
               << "\tfor input and output\n";
     std::cout << "\tIf another is needed, either change your settings\n";
     std::cout << "\tor the choice in the code\n";
-    unsigned int bufferFrames = Hapitrip::mFPP;
+    unsigned int bufferFrames = Hapitrip::as.FPP;
 #ifndef AUDIO_ONLY
-    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::mSampleRate,
+    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::as.sampleRate,
                            &bufferFrames, &Audio::wrapperProcessCallback,
                            (void *)mUdp, &options))
         std::cout << "\nCouldn't open audio device streams!\n";
@@ -427,19 +429,19 @@ void Audio::stop() {
 TestAudio::TestAudio(int channels) { mPhasor.resize(channels, 0.0); }
 
 void TestAudio::sineTest(MY_TYPE *buffer) {
-    for (int ch = 0; ch < Hapitrip::mChannels; ch++) {
-        for (int i = 0; i < Hapitrip::mFPP; i++) {
+    for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
+        for (int i = 0; i < Hapitrip::as.FPP; i++) {
             double tmp = sin(mPhasor[ch]);
-            *buffer++ = (MY_TYPE)(tmp * Hapitrip::mScale);
+            *buffer++ = (MY_TYPE)(tmp * Hapitrip::as.scale);
             mPhasor[ch] += ((ch) ? 0.20 : 0.22);
         }
     }
 }
 
 void TestAudio::printSamples(MY_TYPE *buffer) {
-    for (int ch = 0; ch < Hapitrip::mChannels; ch++) {
-        for (int i = 0; i < Hapitrip::mFPP; i++) {
-            double tmp = ((MY_TYPE)*buffer++) * Hapitrip::mInvScale;
+    for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
+        for (int i = 0; i < Hapitrip::as.FPP; i++) {
+            double tmp = ((MY_TYPE)*buffer++) * Hapitrip::as.invScale;
             std::cout << "\t" << tmp << std::endl;
         }
     }

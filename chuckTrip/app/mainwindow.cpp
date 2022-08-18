@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <RtAudio.h>
-#include <lib.h>
+//#include <lib.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -19,7 +19,7 @@ void MainWindow::on_connectButton_clicked() {
   if (ht != nullptr)
     delete ht;
   ht = new Hapitrip();
-  ht->connect(); // grab the next free client slot from server pool
+  ht->connectToServer("54.176.100.97"); // grab the next free client slot from server pool
 }
 
 void MainWindow::on_runButton_clicked() { ht->run(); }

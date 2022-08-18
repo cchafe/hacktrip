@@ -23,7 +23,7 @@ fun void dj () {
 //spork ~dj();
 
 class Server {
-  adc => chucktrip ct => dac;
+  adc => chucktrip ct;
   ct => Gain g => ct;
   g.gain(0.5);
 [ ["35.178.52.65", "London"]
@@ -39,9 +39,13 @@ class Server {
 ] @=> string servers[][];
   0 => int server;
   4464 => int baseLocalAudioPort;
-  fun void go() {
+  fun void go(int s) {
+    s => server;
+    if (s >= servers.cap()) <<<"bogus server index",s>>>;
+    servers.cap() %=> server;
     ct.localUDPAudioPort(server + baseLocalAudioPort);
     ct.connect(servers[server][0]);
+    ct => dac;
     ct.gain(1.0);
     <<<servers[server][1], "started">>>;
   }
@@ -49,16 +53,22 @@ class Server {
     ct.disconnect();
     ct.gain(0.0);
     <<<servers[server][1], "stopped">>>;
-    server++;
-    servers.cap() %=> server;
   }
 }
-Server server;
-server.go();
-while (true) {
-  5::second => now;
-  server.stop();
-  2::second => now;
-  server.go();
+41 => int nServers;
+Server server[nServers];
+for (0 => int i; i < nServers; i++) {
+  spork ~poly(i);
 }
 1::hour => now;
+fun void poly(int i) {
+  i*1::second => now;
+  server[i].go(i);
+  while (true) {
+    5::second => now;
+    server[i].stop();
+    2::second => now;
+    server[i].go(i);
+  }
+}
+
