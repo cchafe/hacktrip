@@ -7,7 +7,8 @@
 
 #define NO_AUDIO
 #ifndef NO_AUDIO
-#include <RtAudio.h>
+//#include <RtAudio.h> // if using hapitrip.pro and it's inclusion of rtaudio.pri
+#include <../../rtaudio/RtAudio.h> // if not
 #endif
 
 #ifndef AUDIO_ONLY

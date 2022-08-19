@@ -247,20 +247,17 @@ void UDP::stop() { // the connection and close the socket
 }
 
 #ifndef NO_AUDIO
-int UDP::audioCallback(void *outputBuffer, void *inputBuffer,
+int UDP::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio driver for audio transfers
                        unsigned int /* nBufferFrames */,
                        double /* streamTime */,
                        RtAudioStreamStatus /* status */,
                        void * /* data */) // last arg is used for "this"
 {
-    send((int8_t *)inputBuffer);
-    //        QMutexLocker locker(&mMutex);
-    if (mRptr == mWptr)
-        mRptr = mRing / 2;
-    //    if (mRptr < 0) mRptr = 0;
+    send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+    if (mRptr == mWptr) mRptr = mRing / 2; // if there's an incoming packet stream underrun
     mRptr %= mRing;
-    memcpy(outputBuffer, mRingBuffer[mRptr], Hapitrip::as.audioDataLen);
-    mRptr++;
+    memcpy(outputBuffer, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
+    mRptr++; // advance to the next slot
 
     // audio diagnostics, modify or print output and input buffers
     //    memcpy(outputBuffer, inputBuffer, Hapitrip::mAudioDataLen); // test
@@ -270,14 +267,14 @@ int UDP::audioCallback(void *outputBuffer, void *inputBuffer,
     return 0;
 }
 
-int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer,
+int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format UDP callback method
                                   unsigned int nBufferFrames, double streamTime,
                                   RtAudioStreamStatus status, void *arg) {
-    return static_cast<UDP *>(arg)->audioCallback(
+    return static_cast<UDP *>(arg)->audioCallback( // callback method
                 outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
 }
 #endif
-#else
+#else // test with the straight wire example in RtAudio examples/duplex
 
 int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
                          unsigned int /* nBufferFrames */,
@@ -294,7 +291,8 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     return 0;
 }
 
-int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer,
+int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format above callback method
+
                                   unsigned int nBufferFrames, double streamTime,
                                   RtAudioStreamStatus status, void *arg) {
     return static_cast<Audio *>(arg)->audioCallback(
@@ -304,59 +302,62 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer,
 
 #ifndef NO_AUDIO
 void Audio::start() {
-    m_streamTimePrintIncrement = 1.0; // seconds
-    m_streamTimePrintTime = 1.0;      // seconds
-    //    m_adac = new RtAudio(RtAudio::UNIX_JACK);
-    //    m_adac = new RtAudio();
-    m_adac = new RtAudio(RtAudio::LINUX_PULSE);
+    m_streamTimePrintIncrement = 1.0; // seconds -- (unused) from RtAudio examples/duplex
+    m_streamTimePrintTime = 1.0;      // seconds -- (unused) from RtAudio examples/duplex
 
-    std::vector<unsigned int> deviceIds = m_adac->getDeviceIds();
+    // various RtAudio API's, in this case it falls back to pulse if no jack daemon running
+    m_adac = new RtAudio(RtAudio::LINUX_PULSE);
+    //    m_adac = new RtAudio(RtAudio::UNIX_JACK); // jack only
+    //    m_adac = new RtAudio(); // test with win10
+
+    std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
     if (deviceIds.size() < 1) {
         std::cout << "\nNo audio devices found!\n";
         exit(1);
     }
-    if (m_adac->getDeviceCount() < 1) {
+    if (m_adac->getDeviceCount() < 1) { // something found but double check with getDeviceCount
         std::cout << "\nNo audio devices found!\n";
         exit(1);
     } else {
         std::cout << "\naudio devices found =\n"
                   << m_adac->getDeviceCount() << "\n";
     }
+    // setup borrowed from RtAudio examples/duplex
     m_channels = Hapitrip::as.channels;
     m_fs = Hapitrip::as.sampleRate;
-    m_iDevice = m_oDevice = 0;
-    m_iOffset = m_oOffset = 0; // first channel
+    m_iDevice = m_oDevice = 0; // unused
+    m_iOffset = m_oOffset = 0; // channel 0 is first channel
     m_adac->showWarnings(true);
-    // copy all setup into all stream info
+    // copy info into audio input and audio output streams
     m_iParams.nChannels = m_channels;
     m_iParams.firstChannel = m_iOffset;
     m_oParams.nChannels = m_channels;
     m_oParams.firstChannel = m_oOffset;
     m_iParams.deviceId = m_adac->getDefaultInputDevice();
     m_oParams.deviceId = m_adac->getDefaultOutputDevice();
-    options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME;
+    options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME; // non-interleaved
     options.numberOfBuffers =
-            Hapitrip::as.numberOfBuffersSuggestionToRtAudio; // Windows DirectSound,
-    // Linux OSS, and Linux
-    // Alsa APIs only.
-    // value set by the user is replaced during execution of the
+            Hapitrip::as.numberOfBuffersSuggestionToRtAudio;
+    // Windows DirectSound, Linux OSS, and Linux Alsa APIs only.
+    // value set above is replaced during execution of the
     // RtAudio::openStream() function by the value actually used by the system
 
-    std::cout << "using default audio interface device\n";
+    std::cout << "using default audio interface device\n"; // brag about being set correctly
     std::cout << m_adac->getDeviceInfo(m_iParams.deviceId).name
               << "\tfor input and output\n";
     std::cout << "\tIf another is needed, either change your settings\n";
     std::cout << "\tor the choice in the code\n";
     unsigned int bufferFrames = Hapitrip::as.FPP;
-#ifndef AUDIO_ONLY
+#ifndef AUDIO_ONLY   
     if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::as.sampleRate,
                            &bufferFrames, &Audio::wrapperProcessCallback,
-                           (void *)mUdp, &options))
+                           (void *)mUdp, &options)) // specify UDP class callback
         std::cout << "\nCouldn't open audio device streams!\n";
 #else
+    // from RtAudio examples/duplex
     if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::mSampleRate,
                            &bufferFrames, &Audio::wrapperProcessCallback,
-                           (void *)this, &options))
+                           (void *)this, &options)) // specify Audio class callback
         std::cout << "\nCouldn't open audio device streams!\n";
 
 #endif
@@ -369,13 +370,12 @@ void Audio::start() {
         std::cout << "\nStream latency = " << m_adac->getStreamLatency()
                   << " frames" << std::endl;
     }
-    std::cout << "\nAudio stream start" << std::endl;
     if (m_adac->startStream())
         std::cout << "\nCouldn't start streams!\n";
-    std::cout << "\nAudio stream started" << std::endl;
+    std::cout << "\nAudio stream started" << std::endl; // phew...
 }
 
-void Audio::stop() {
+void Audio::stop() { // graceful audio shutdown
     if (m_adac)
         if (m_adac->isStreamRunning()) {
             std::cout << "\nAudio stream stop" << std::endl;
@@ -400,7 +400,7 @@ void TestAudio::sineTest(MY_TYPE *buffer) { // generate next bufferfull and conv
     }
 }
 
-void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert to double and pring
+void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert to double and print
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         for (int i = 0; i < Hapitrip::as.FPP; i++) {
             double tmp = ((MY_TYPE)*buffer++) * Hapitrip::as.invScale;
