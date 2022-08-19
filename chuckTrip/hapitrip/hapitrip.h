@@ -5,8 +5,6 @@
 
 ////#define AUDIO_ONLY
 
-#define FAKE_STREAMS
-#define FAKE_STREAMS_TIMER
 #define NO_AUDIO
 #ifndef NO_AUDIO
 #include <RtAudio.h>
@@ -18,36 +16,24 @@
 #include <QTcpSocket>
 #include <QTimer>
 #include <QUdpSocket>
-
-const QString gVersion = "clientV2";
-//const QString gServer = "3.101.24.143"; // cc EC2 new IP 15-Aug-2022
-//const QString gServer = "54.153.79.243"; // ccTest
-//const QString gServer = "54.176.100.97"; // SF
-//const QString gServer = "35.178.52.65"; // London
-
-//const QString gServer = "jackloop256.stanford.edu";
-// const QString gServer = "cmn55.stanford.edu";
-// const QString gServer = "cmn9.stanford.edu";
-// const QString gServer = "171.64.197.158";
-// const QString gServer = "127.0.0.2"; // don't use "loopback", doesn't resolve
-// const QString gServer = "localhost";
 #endif
+
+const QString gVersion = "0.1-rc.1";
 
 typedef signed short MY_TYPE; // audio interface data is 16bit ints
 #define FORMAT RTAUDIO_SINT16 // which has this rtaudio name
 
-class TestAudio {
+class TestAudio { // for insertion in test points
 public:
   TestAudio(int channels);
-  void printSamples(MY_TYPE *buffer);
-  void sineTest(MY_TYPE *buffer);
-
+  void printSamples(MY_TYPE *buffer); // see the signal
+  void sineTest(MY_TYPE *buffer); // generate a signal
 private:
-  std::vector<double> mPhasor;
+  std::vector<double> mPhasor; // multi-channel capable
 };
 
 #ifndef AUDIO_ONLY
-struct HeaderStruct {
+struct HeaderStruct { // standard JackTrip network packet header
 public:
   // watch out for alignment...
   uint64_t TimeStamp;    ///< Time Stamp
@@ -61,54 +47,48 @@ public:
       NumOutgoingChannelsToNet; ///< Number of outgoing Channels to the network
 };
 
-class UDP : public QUdpSocket  {
+class UDP : public QUdpSocket  { // UDP socket for send and receive
 Q_OBJECT
 public:
+    UDP(QString server);
     ~UDP();
-  void start();
-  void setPeer(QString peer) { mServer = peer; }
+  void start(); // initialize HeaderStruct, bind socket, ready to receive
   void setPeerUdpPort(int port) { mPeerUdpPort = port; }
-  void setTest(int channels) { mTest = new TestAudio(channels); }
-  void stop();
-  void send(int8_t *audioBuf);
+  void setTest(int channels) { mTest = new TestAudio(channels); } // for test points
+  void send(int8_t *audioBuf);  // send one audio packet to peer
+  void stop(); // send standard JackTrip stop packet to peer
+  // for non-audio callback triggering of audio rcv and send e.g., chuck
+  void rcvAudioData(float *buf); // readPendingDatagrams into ring and pull next packet from ring
+  void sendAudioData(float *buf); // convert one bufferfull to short int and send out
 #ifndef NO_AUDIO
   int audioCallback(void *outputBuffer, void *inputBuffer,
                     unsigned int nBufferFrames, double streamTime,
                     RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
 #endif
 private:
-  //    QMutex mMutex;                     ///< Mutex to protect read and write
-  //    operations
-  int mWptr;
-  int mRptr;
-  int mRing;
-  std::vector<int8_t *> mRingBuffer;
-  QHostAddress serverHostAddress;
-  HeaderStruct mHeader;
-  QHostAddress mPeerAddr;
-  int mPeerUdpPort;
-  QByteArray mBufSend;
-  QByteArray mBufRcv;
-  int mSendSeq;
-  QElapsedTimer mRcvTmer;
-  QElapsedTimer mRcvTimeout;
-  TestAudio *mTest;
+  void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
+  int mWptr; // ring buffer write pointer
+  int mRptr; // ring buffer read pointer
+  int mRing; // ring buffer length in number of packets
+  std::vector<int8_t *> mRingBuffer; // ring buffer
+  QHostAddress serverHostAddress; // peer
+  int mPeerUdpPort; // ephemeral peer audio port given by peer
+  HeaderStruct mHeader; // packet header for the outgoing packet
+  QByteArray mRcvPacket; // the incoming packet
+  QByteArray mSendPacket; // the outgoing packet
+  int mSendSeq; // sequence number written in the header for the outgoing packet
+  QElapsedTimer mRcvTimer; // for rcvElapsedTime
+  TestAudio *mTest; // in case test points are needed
 public slots:
-  void readPendingDatagrams();
-  void rcvTimeout(bool restart);
-#ifdef FAKE_STREAMS
-  void sendDummyData(float *buf);
-  void rcvDummyData(float *buf);
+  void readPendingDatagrams(); // when readyRead is signaled
 private:
-  QTimer mSendTmer;
-  int8_t *mTmpAudioBuf;
-  QString mServer;
-#endif
+  int8_t *mTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
+  QString mServer; // peer address
 };
 
 class TCP : public QTcpSocket {
 public:
-  int connectToServer();
+  int connectToServer(); // TCP handshake with server, returns ephemeral port number
 };
 #endif
 
@@ -152,7 +132,7 @@ private:
 #endif
 
 class APIsettings {
-
+// default values
     static const int dSampleRate = 48000;
     static const int dFPP = 128;
     static const int dChannels = 1;
@@ -177,6 +157,7 @@ class APIsettings {
 #endif
 
 private:
+    // variable values initialized to defaults
     int sampleRate = dSampleRate;
     int FPP = dFPP;
     int channels = dChannels;
@@ -197,7 +178,7 @@ private:
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
 
-    QString server = NULL;
+    QString server = NULL; // the server name or IP address
     friend class TCP;
     friend class UDP;
 #endif
@@ -210,15 +191,16 @@ private:
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
-  void connectToServer(QString server);
-  void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; };
-  void run();
-  void stop();
+  void connectToServer(QString server); // initiate handshake and start listening for UDP incoming
+  void run(); // initiate bidirectional flows, sending UDP outgoing to server starts it sending
+  void stop(); // stop the works
+  void xfrBufs(float *sendBuf, float *rcvBuf); // when not using an audio callback e.g., for chuck
+  // getters of current API parameter values and setters to override their initial default settings
   int getFPP() { return as.FPP; }
-  void xfrBufs(float *sendBuf, float *rcvBuf);
+  void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; }; // override default
 
 private:
-  static APIsettings as;
+  static APIsettings as; // all API parameters
   friend class Audio;
   friend class TestAudio;
 #ifndef AUDIO_ONLY

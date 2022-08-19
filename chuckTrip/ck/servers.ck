@@ -21,6 +21,10 @@ fun void dj () {
   }
 }
 //spork ~dj();
+//["54.153.79.243", "ccTest"]
+//["jackloop128.stanford.edu", "jackloop128"]
+//["cmn9.stanford.edu", "cmn9"]
+//["localhost", "localhost"]
 
 class Server {
   adc => chucktrip ct => dac;
