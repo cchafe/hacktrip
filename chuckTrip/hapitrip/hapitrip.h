@@ -158,9 +158,9 @@ class APIsettings {
 
 private:
     // variable values initialized to defaults
-    int sampleRate = dSampleRate;
     int FPP = dFPP;
     int channels = dChannels;
+    int sampleRate = dSampleRate;
     int bytesPerSample = dBytesPerSample;
     int audioDataLen = dAudioDataLen;
     double scale = dScale;
@@ -195,9 +195,19 @@ public:
   void run(); // initiate bidirectional flows, sending UDP outgoing to server starts it sending
   void stop(); // stop the works
   void xfrBufs(float *sendBuf, float *rcvBuf); // when not using an audio callback e.g., for chuck
+
   // getters of current API parameter values and setters to override their initial default settings
   int getFPP() { return as.FPP; }
-  void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; }; // override default
+  void setFPP(int fpp) { as.FPP = fpp; }
+
+  int getChannels() { return as.channels; }
+  void setChannels(int nChans) { as.channels = nChans; }
+
+  int getSampleRate() { return as.sampleRate; }
+  void setSampleRate(int srate) { as.sampleRate = srate; }
+
+  int getLocalUDPaudioPort() { return as.localAudioUdpPort; };
+  void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; };
 
 private:
   static APIsettings as; // all API parameters

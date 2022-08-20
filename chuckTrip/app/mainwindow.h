@@ -24,8 +24,20 @@ private slots:
 
   void on_stopButton_clicked();
 
+  void on_FPPcomboBox_currentIndexChanged(const QString &arg1);
+
+  void on_channelsSpinBox_valueChanged(int arg1);
+
+  void updateStateFromUI();
+
+  void on_serverComboBox_currentIndexChanged(const QString &arg1);
+
+  void on_srateComboBox_currentIndexChanged(const QString &arg1);
+
 private:
   Ui::MainWindow *ui;
   Hapitrip *ht;
+  bool connected;
+  QString mServer;
 };
 #endif // MAINWINDOW_H
