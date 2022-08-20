@@ -8,13 +8,19 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 - hapitrip creates a shared library
 - grabs latest rtaudio as git submodule from URL and builds as shared library
 - works for linux and windows
+- qt5 and qt6 compatible
 
 ## code examples (all are qt projects, supported by qt creator workflow)
 - app called "app" 
   - minimal GUI (qt designer)
   - hapitrip and rtaudio included via shared libraries
+    - open in creator project file chucktrip/gui.pro
+    - executable is chucktrip/app/app
 - plugin called "chuckTrip" is a chuck chugin accessible from chuck scripts 
   - version with hapitrip compiled in
+    - open in creator project file chucktrip/chucktrip.pro
+    - chugin is chucktrip/chugin/chucktrip.chug
+    - example chuck scripts in chucktrip/ck/
   - version built with hapitrip included via shared library
 
 ## tutorials
