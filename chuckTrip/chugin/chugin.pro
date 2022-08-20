@@ -16,9 +16,10 @@ TARGET = chucktrip.chug
 SOURCES += chucktrip.cpp \
 ../hapitrip/hapitrip.cpp
 
+DEFINES += "NO_AUDIO"
+
 HEADERS += ../hapitrip/hapitrip.h
 INCLUDEPATH += ../hapitrip
-
 
 INCLUDEPATH += .
 INCLUDEPATH += chuck/include/

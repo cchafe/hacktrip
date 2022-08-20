@@ -92,6 +92,8 @@ int TCP::connectToServer() { // this is the TCP handshake
     return peerUdpPort;
 }
 
+UDP::UDP(QString server) : mServer(server) {};
+
 void UDP::start() {
     // init the JackTrip header struct
     mHeader.TimeStamp = (uint64_t)0;

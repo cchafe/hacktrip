@@ -5,7 +5,6 @@
 
 ////#define AUDIO_ONLY
 
-#define NO_AUDIO
 #ifndef NO_AUDIO
 //#include <RtAudio.h> // if using hapitrip.pro and it's inclusion of rtaudio.pri
 #include <../../rtaudio/RtAudio.h> // if not
@@ -154,7 +153,7 @@ class APIsettings {
         (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
-    static const bool dVerbose = 0;
+    static const bool dVerbose = 1;
 #endif
 
 private:
