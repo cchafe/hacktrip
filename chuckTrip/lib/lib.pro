@@ -1,8 +1,7 @@
-QT       += core gui network
-include(../lib/lib.pri)
-include(../rtaudio/rtaudio.pri)
-include(../hapitrip/hapitrip.pri)
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT -= gui
+
+TEMPLATE = lib
+DEFINES += LIB_LIBRARY
 
 CONFIG += c++17
 
@@ -11,16 +10,17 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    main.cpp \
-    mainwindow.cpp
+    lib.cpp
 
 HEADERS += \
-    mainwindow.h
-
-FORMS += \
-    mainwindow.ui
+    lib_global.h \
+    lib.h
 
 # Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
+unix {
+    target.path = /usr/lib
+}
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES += \
+    lib.pri
