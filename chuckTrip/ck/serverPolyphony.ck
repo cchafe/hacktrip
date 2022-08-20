@@ -26,16 +26,16 @@ class Server {
   adc => chucktrip ct;
   ct => Gain g => ct;
   g.gain(0.5);
-[ ["35.178.52.65", "London"]
-, ["3.239.229.107", "Baltimore"]
-, ["68.66.116.192", "Boston"]
-, ["70.224.226.152", "Los Angeles"]
-, ["216.202.223.12", "Nashville"]
-, ["15.181.162.127", "New York City"]
-, ["15.220.1.14", "Portland"]
-, ["54.176.100.97", "San Francisco"]
-, ["20.125.46.74", "Seattle"]
-, ["35.185.142.249", "Taipei"]
+[ ["13.40.164.125", "London"] // changed IP 20-Aug
+, ["3.231.55.190", "Baltimore"]
+//, ["68.66.116.192", "Boston"]
+//, ["70.224.226.152", "Los Angeles"]
+//, ["216.202.223.12", "Nashville"]
+//, ["15.181.162.127", "New York City"]
+//, ["15.220.1.14", "Portland"]
+//, ["54.176.100.97", "San Francisco"]
+//, ["20.125.46.74", "Seattle"]
+//, ["35.185.142.249", "Taipei"]
 ] @=> string servers[][];
   0 => int server;
   4464 => int baseLocalAudioPort;
@@ -55,7 +55,7 @@ class Server {
     <<<servers[server][1], "stopped">>>;
   }
 }
-41 => int nServers;
+1 => int nServers;
 Server server[nServers];
 for (0 => int i; i < nServers; i++) {
   spork ~poly(i);
