@@ -1,0 +1,20 @@
+app.pro builds chugin, qt5 only because of chuck
+qmake app.pro
+make clean
+make
+cd ck/
+chuck --chugin-path:../chugin/ --srate:48000 serverPolyphony.ck 
+
+gui.pro builds simple gui app in app/, either qt5 or qt6
+qmake gui.pro
+...or...
+qmake6 gui.pro
+make clean
+make
+/////////////// do this once in the terminal since libs are not system installed
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/app/rtaudio/
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/app/hapitrip/
+/////////////// (or just build and run in creator which keeps track of libs it creates)
+app/app
+
+

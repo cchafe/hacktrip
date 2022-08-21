@@ -1,7 +1,6 @@
 QT -= gui
 QT += network
-include(../rtaudio/rtaudio.pri)
-#include(../coreApp/coreApp.pri)
+include(rtaudio/rtaudio.pri) # in this project because ../rtaudio is pure from repo
 
 # build needs environment set
 # export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
