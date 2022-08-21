@@ -1,12 +1,13 @@
 // run from /home/cc/hacktrip/ChuckTrip/ck
 // export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/ChuckTrip/hapitrip/
-//chuck --chugin-path:../ --srate:48000 serverPolyphony.ck 
+//chuck --chugin-path:../ --srate:48000 serverMesh.ck 
 //chuck --chugin-path:../chugin/ --srate:48000 --verbose:5 test.ck
 
 dac => WvOut2 w => blackhole;
 dac.gain(5.0);
 w.wavFilename("/tmp/test.wav");
-
+Gain mesh;
+mesh.gain(0.01);
 class Server {
   ChuckTrip ct;
 [ 
@@ -30,12 +31,18 @@ class Server {
     ct.localUDPAudioPort(server + baseLocalAudioPort);
     ct.connect(servers[server][0]);
     adc.chan(0) => ct.chan(s%2);
+
+    mesh => ct.chan(s%2);
+    
   ct.chan(s%2) => Gain g => ct.chan(s%2);
   g.gain(0.5);
   s++;
   ct.chan(s%2) => Gain g1 => ct.chan(s%2);
   g1.gain(0.1);
     ct.chan(s%2) => dac.chan(s%2);
+
+    ct.chan(s%2) => mesh;
+    
     ct.gain(1.0);
     <<<servers[server][1], "started">>>;
   }

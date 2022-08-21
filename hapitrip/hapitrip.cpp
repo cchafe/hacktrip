@@ -169,34 +169,38 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     }
 }
 
-// when not using an audio callback e.g., for chuck
-void UDP::sendAudioData(float *buf) {
-    MY_TYPE * tmp = (MY_TYPE *)mTmpAudioBuf;
-    for (int ch = 0; ch < 1; ch++) {
-        for (int i = 0; i < Hapitrip::as.FPP; i++) {
-            *tmp++ = (MY_TYPE)(buf[i] * Hapitrip::as.scale);
-        }
+// when not using an audio callback e.g., for chuck these are called from its tick loop
+///////////////////////////////////////////////////
+// chuck is interleaved, so convert what it wants to send to be non-interleaved
+void UDP::sendAudioData(float *buf) { // buf from chuck is interleaved
+    MY_TYPE * tmp = (MY_TYPE *)mTmpAudioBuf; // make outgoing packet non-interleaved
+    for (int i = 0; i < Hapitrip::as.channels*Hapitrip::as.FPP; i++) {
+      int nilFr = i / Hapitrip::as.channels;
+      int nilCh = i % Hapitrip::as.channels;
+      tmp[nilCh*Hapitrip::as.FPP + nilFr] = (MY_TYPE)(buf[i] * Hapitrip::as.scale); // non-interleaved = interleaved
     }
     send(mTmpAudioBuf);
 }
-void UDP::rcvAudioData(float *buf) {
+
+// chuck is interleaved, so non-interleaved arriving packets are converted
+void UDP::rcvAudioData(float *buf) { // buf to chuck is interleaved
     readPendingDatagrams();
     if (mRptr == mWptr)
         mRptr = mWptr - 2;
     if (mRptr<0) mRptr += mRing;
     mRptr %= mRing;
-    memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen);
+    memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // non-interleaved
     mRptr++;
-
-    MY_TYPE * tmp1 = (MY_TYPE *)mTmpAudioBuf;
-    float * tmp2 = (float *)buf;
-
-    for (int ch = 0; ch < 1; ch++) {
-        for (int i = 0; i < Hapitrip::as.FPP; i++) {
-            tmp2[i] = tmp1[i] * Hapitrip::as.invScale;
-        }
+//    mTest->sineTest((MY_TYPE *)mTmpAudioBuf); // non-interleaved test signal
+    MY_TYPE * tmp1 = (MY_TYPE *)mTmpAudioBuf; // non-interleaved
+    float * tmp2 = (float *)buf; // interleaved
+    for (int i = 0; i < Hapitrip::as.channels*Hapitrip::as.FPP; i++) {
+      int nilFr = i / Hapitrip::as.channels;
+      int nilCh = i % Hapitrip::as.channels;
+      tmp2[i] = tmp1[nilCh*Hapitrip::as.FPP + nilFr] * Hapitrip::as.invScale; // interleaved = non-interleaved
     }
 }
+///////////////////////////////////////////////////
 
 void UDP::readPendingDatagrams() { // incoming is triggered from readyRead signal or from rcvAudioData
     // read datagrams in a loop to make sure that all received datagrams are processed

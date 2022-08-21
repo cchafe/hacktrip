@@ -135,7 +135,7 @@ class APIsettings {
 // default values
     static const int dSampleRate = 48000;
     static const int dFPP = 128;
-    static const int dChannels = 1;
+    static const int dChannels = 2;
     static const int dBytesPerSample = sizeof(MY_TYPE);
     static const int dAudioDataLen = dFPP * dChannels * dBytesPerSample;
     constexpr static const double dScale = 32767.0;
@@ -153,7 +153,7 @@ class APIsettings {
         (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
-    static const bool dVerbose = 1;
+    static const bool dVerbose = 0;
 #endif
 
 private:
