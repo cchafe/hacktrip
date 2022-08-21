@@ -1,0 +1,17 @@
+guiDemo
+
+creates a simple gui app -- called "app"
+the example gui interface built with Designer
+guiDemo.pro builds it in app/, with either qt5 or qt6
+qmake guiDemo.pro
+...or...
+qmake6 gui.pro
+make clean
+make
+/////////////// do this once in the terminal since libs are not system installed
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/guiDemo/librtaudio/
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/guiDemo/libhapitrip/
+/////////////// (or just build and run in creator which keeps track of libs it creates)
+app/app
+
+

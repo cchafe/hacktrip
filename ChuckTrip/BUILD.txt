@@ -1,0 +1,10 @@
+ChuckTrip
+
+creates a chugin -- ChuckTrip.chug
+ChuckTrip.pro builds the chugin, only works with qt5 because of chuck needing that
+qmake ChuckTrip.pro
+make clean
+make
+cd ck/
+chuck --chugin-path:../chugin/ --srate:48000 serverPolyphony.ck 
+

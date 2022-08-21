@@ -14,20 +14,20 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 - app called "app" 
   - minimal GUI (qt designer)
   - hapitrip and rtaudio included via shared libraries
-    - open in creator project file chucktrip/gui.pro
-    - executable is chucktrip/app/app
-- plugin called "chuckTrip" is a chuck chugin accessible from chuck scripts 
-  - version with hapitrip compiled in
-    - open in creator project file chucktrip/chucktrip.pro
-    - chugin is chucktrip/chugin/chucktrip.chug
+    - open in creator project file guiDemo/guiDemo.pro
+    - executable is app/app
+- plugin called "ChuckTrip" is a chuck chugin accessible from chuck scripts 
+  - this version is with hapitrip compiled in for ease of chucking (but shared lib tests ok, too)
+    - open in creator project file ChuckTrip/ChuckTrip.pro
+    - chugin is ChuckTrip/ChuckTrip.chug
     - example chuck scripts in chucktrip/ck/
-  - version built with hapitrip included via shared library
 
-## tutorials
+## tutorials that can result from the code examples
 - "app" AUDIO_ONLY = rtaudio local audio loopback, uses audio callback, sine test
 - "app" SERVER_HANDSHAKE_ONLY = connect to server, keep connection alive, quit
 - "app" (complete) = bidirectional audio stream, simple ring buffer for received packets
-- "chuckTrip" (complete) = a plugin that uses sample synchronous polling and has no event loop
+- "ChuckTrip" (complete) = a plugin that uses sample synchronous polling and has no event loop
+
 
 ## Done:
 - integrate all of the above into new branch dev
@@ -36,6 +36,12 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 - document API
 - merge to main
 - release 0.2
+- prpject layouts completed
+```
+gVersion = "0.2.1"
+```
+- merge to main
+- release 0.2.1
 ## TODO:
 ```
 gVersion = "0.3-rc.1"
@@ -51,4 +57,3 @@ gVersion = "0.4-rc.1"
 gVersion = "0.5-rc.1"
 ```
 - try things out in a concert setting
-
