@@ -28,6 +28,7 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 - "app" (complete) = bidirectional audio stream, simple ring buffer for received packets
 - "ChuckTrip" (complete) = a plugin that uses sample synchronous polling and has no event loop
 
+
 ## Done:
 - integrate all of the above into new branch dev
 - flush out API with choice of server, FPP, channels, etc.
@@ -56,5 +57,3 @@ gVersion = "0.4-rc.1"
 gVersion = "0.5-rc.1"
 ```
 - try things out in a concert setting
-
-
