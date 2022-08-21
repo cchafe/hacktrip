@@ -37,7 +37,7 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 - release 0.2
 - prpject layouts completed
 ```
-gVersion = "0.2.1-rc.1"
+gVersion = "0.2.1"
 ```
 - merge to main
 - release 0.2.1
