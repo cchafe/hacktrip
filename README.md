@@ -36,7 +36,7 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 - document API
 - merge to main
 - release 0.2
-- prpject layouts completed
+- project layouts completed
 ```
 gVersion = "0.2.1"
 ```

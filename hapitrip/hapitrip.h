@@ -18,7 +18,7 @@
 #include <QUdpSocket>
 #endif
 
-const QString gVersion = "0.2.1";
+const QString gVersion = "0.3-rc.1";
 
 typedef signed short MY_TYPE; // audio interface data is 16bit ints
 #define FORMAT RTAUDIO_SINT16 // which has this rtaudio name
