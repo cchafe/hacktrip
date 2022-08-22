@@ -51,12 +51,18 @@ void MainWindow::on_srateComboBox_currentIndexChanged(const QString &arg1)
     ht->setSampleRate(arg1.toInt());
 }
 
+void MainWindow::on_audioComboBox_currentIndexChanged(int arg1)
+{
+    ht->setRtAudioAPI(arg1);
+}
+
 void MainWindow::updateStateFromUI() {
     mServer = ui->serverComboBox->currentText();
     ht->setFPP(ui->FPPcomboBox->currentText().toInt());
     ht->setChannels(ui->channelsSpinBox->value());
     ht->setSampleRate(ui->srateComboBox->currentText().toInt());
 };
+
 
 
 

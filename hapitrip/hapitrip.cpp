@@ -316,9 +316,8 @@ void Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds -- (unused) from RtAudio examples/duplex
     m_streamTimePrintTime = 1.0;      // seconds -- (unused) from RtAudio examples/duplex
 
-    // various RtAudio API's, in this case it falls back to pulse if no jack daemon running
-//    m_adac = new RtAudio(RtAudio::LINUX_PULSE);
-        m_adac = new RtAudio(RtAudio::UNIX_JACK); // jack only
+    // various RtAudio API's
+    m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI)); // reference by enum
     //    m_adac = new RtAudio(); // test with win10
 
     std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices

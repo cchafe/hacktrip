@@ -137,6 +137,7 @@ private:
 
 class APIsettings {
 // default values
+    static const int dRtAudioAPI = 3;
     static const int dSampleRate = 48000;
     static const int dFPP = 128;
     static const int dChannels = 2;
@@ -162,6 +163,7 @@ class APIsettings {
 
 private:
     // variable values initialized to defaults
+    int rtAudioAPI = dRtAudioAPI;
     int FPP = dFPP;
     int channels = dChannels;
     int sampleRate = dSampleRate;
@@ -201,6 +203,8 @@ public:
   void xfrBufs(float *sendBuf, float *rcvBuf); // when not using an audio callback e.g., for chuck
 
   // getters of current API parameter values and setters to override their initial default settings
+  void setRtAudioAPI(int api) { as.rtAudioAPI = api; }
+
   int getFPP() { return as.FPP; }
   void setFPP(int fpp) {
       as.FPP = fpp;
