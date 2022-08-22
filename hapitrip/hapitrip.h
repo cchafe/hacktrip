@@ -3,7 +3,11 @@
 
 #include "hapitrip_global.h"
 
-////#define AUDIO_ONLY
+//#define AUDIO_ONLY
+#ifdef AUDIO_ONLY
+#include "qobject.h"
+#include "qobjectdefs.h"
+#endif
 
 #ifndef NO_AUDIO
 //#include <RtAudio.h> // if built from a hapitrip.pro and it's likelt inclusion of rtaudio.pri
@@ -198,16 +202,24 @@ public:
 
   // getters of current API parameter values and setters to override their initial default settings
   int getFPP() { return as.FPP; }
-  void setFPP(int fpp) { as.FPP = fpp; }
+  void setFPP(int fpp) {
+      as.FPP = fpp;
+      as.audioDataLen = as.FPP * as.channels * as.bytesPerSample;
+  }
 
   int getChannels() { return as.channels; }
-  void setChannels(int nChans) { as.channels = nChans; }
+  void setChannels(int nChans) {
+      as.channels = nChans;
+      as.audioDataLen = as.FPP * as.channels * as.bytesPerSample;
+  }
 
   int getSampleRate() { return as.sampleRate; }
   void setSampleRate(int srate) { as.sampleRate = srate; }
 
+#ifndef AUDIO_ONLY
   int getLocalUDPaudioPort() { return as.localAudioUdpPort; };
   void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; };
+#endif
 
 private:
   static APIsettings as; // all API parameters

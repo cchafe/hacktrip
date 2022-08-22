@@ -8,9 +8,10 @@
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
 
-void Hapitrip::connectToServer(QString server) {
-    as.server = server; // set the server
+void Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef AUDIO_ONLY
+    as.server = server; // set the server
+//    std::cout << server.toStdString() << std::endl;
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
     mUdp->setPeerUdpPort(mTcp->connectToServer()); // to get the server port to send to
@@ -34,6 +35,7 @@ void Hapitrip::run() { // (before server times out in like 10 seconds)
 #endif
 }
 
+#ifndef AUDIO_ONLY
 // when not using an audio callback e.g., for chuck
 void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and send
     if (mUdp != nullptr) {
@@ -41,6 +43,7 @@ void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and
         mUdp->rcvAudioData(rcvBuf);
     }
 }
+#endif
 
 void Hapitrip::stop() { // the whole show
 #ifndef AUDIO_ONLY
@@ -49,15 +52,17 @@ void Hapitrip::stop() { // the whole show
 #ifndef NO_AUDIO
     mAudio.stop();
 #endif
+#ifndef AUDIO_ONLY
     delete mUdp;
     mUdp = nullptr;
+#endif
 }
 
 #ifndef AUDIO_ONLY
 int TCP::connectToServer() { // this is the TCP handshake
     QHostAddress serverHostAddress;
     if (!serverHostAddress.setAddress(Hapitrip::as.server)) { // DNS resolver
-        std::cout << "\nno running Qt event loop but things are ok..." << std::endl;
+        std::cout << "\nif this is a chuging, then there's no running Qt event loop but things are ok..." << std::endl;
         QHostInfo info = QHostInfo::fromName(Hapitrip::as.server);
         std::cout << "...ignore all that\n" << std::endl;
 
@@ -132,8 +137,8 @@ void UDP::start() {
         }
     }
     int ret = 0;
-    connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams); // dispatch arriving packet
     ret = bind(Hapitrip::as.localAudioUdpPort); // start listening
+    connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams); // dispatch arriving packet
     if (Hapitrip::as.verbose)
         std::cout << "UDP: start listening = " << ret << " "
                                         << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
@@ -290,7 +295,7 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 {
     // audio diagnostics, modify or print output and input buffers
     memcpy(outputBuffer, inputBuffer,
-           Hapitrip::mAudioDataLen); // test straight wire
+           Hapitrip::as.audioDataLen); // test straight wire
     //        mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
     //        mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
 
@@ -312,8 +317,8 @@ void Audio::start() {
     m_streamTimePrintTime = 1.0;      // seconds -- (unused) from RtAudio examples/duplex
 
     // various RtAudio API's, in this case it falls back to pulse if no jack daemon running
-    m_adac = new RtAudio(RtAudio::LINUX_PULSE);
-    //    m_adac = new RtAudio(RtAudio::UNIX_JACK); // jack only
+//    m_adac = new RtAudio(RtAudio::LINUX_PULSE);
+        m_adac = new RtAudio(RtAudio::UNIX_JACK); // jack only
     //    m_adac = new RtAudio(); // test with win10
 
     std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
@@ -361,7 +366,7 @@ void Audio::start() {
         std::cout << "\nCouldn't open audio device streams!\n";
 #else
     // from RtAudio examples/duplex
-    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::mSampleRate,
+    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::as.sampleRate,
                            &bufferFrames, &Audio::wrapperProcessCallback,
                            (void *)this, &options)) // specify Audio class callback
         std::cout << "\nCouldn't open audio device streams!\n";

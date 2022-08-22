@@ -4,8 +4,8 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
-  ht = new Hapitrip(); // APIstructure inits with its defaults
-  updateStateFromUI(); // override those with initial UI values
+  ht = new Hapitrip(); // APIstructure inits its params with its defaults
+  updateStateFromUI(); // override params with initial UI values
   connected = false;
 }
 

@@ -1,7 +1,7 @@
 ChuckTrip
 
 creates a chugin -- ChuckTrip.chug
-ChuckTrip.pro builds the chugin, only works with qt5 because of chuck needing that
+ChuckTrip.pro builds the chugin
 qmake ChuckTrip.pro
 make clean
 make

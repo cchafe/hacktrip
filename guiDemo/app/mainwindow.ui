@@ -135,12 +135,7 @@
      </property>
      <item>
       <property name="text">
-       <string>13.40.164.125</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>3.231.55.190</string>
+       <string>jackloop128.stanford.edu</string>
       </property>
      </item>
     </widget>
