@@ -8,10 +8,9 @@
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
 
-void Hapitrip::connectToServer([[maybe_unused]] QString server) {
+int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef AUDIO_ONLY
     as.server = server; // set the server
-//    std::cout << server.toStdString() << std::endl;
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
     mUdp->setPeerUdpPort(mTcp->connectToServer()); // to get the server port to send to
@@ -24,9 +23,10 @@ void Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef NO_AUDIO
     mAudio.setTest(as.channels);
 #endif
+    return mUdp->getPeerUdpPort();
 }
 
-void Hapitrip::run() { // (before server times out in like 10 seconds)
+void Hapitrip::run() { // hit this before server times out in like 10 seconds
 #ifndef AUDIO_ONLY
     mUdp->start(); // bidirectional flows
 #endif
@@ -34,16 +34,6 @@ void Hapitrip::run() { // (before server times out in like 10 seconds)
     mAudio.start();
 #endif
 }
-
-#ifndef AUDIO_ONLY
-// when not using an audio callback e.g., for chuck
-void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and send
-    if (mUdp != nullptr) {
-        mUdp->sendAudioData(sendBuf);
-        mUdp->rcvAudioData(rcvBuf);
-    }
-}
-#endif
 
 void Hapitrip::stop() { // the whole show
 #ifndef AUDIO_ONLY
@@ -59,6 +49,14 @@ void Hapitrip::stop() { // the whole show
 }
 
 #ifndef AUDIO_ONLY
+// when not using an audio callback e.g., for chuck
+void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and send
+    if (mUdp != nullptr) {
+        mUdp->sendAudioData(sendBuf);
+        mUdp->rcvAudioData(rcvBuf);
+    }
+}
+
 int TCP::connectToServer() { // this is the TCP handshake
     QHostAddress serverHostAddress;
     if (!serverHostAddress.setAddress(Hapitrip::as.server)) { // DNS resolver

@@ -138,6 +138,11 @@
        <string>jackloop128.stanford.edu</string>
       </property>
      </item>
+     <item>
+      <property name="text">
+       <string>aardvark</string>
+      </property>
+     </item>
     </widget>
     <widget class="QLabel" name="label_3">
      <property name="geometry">

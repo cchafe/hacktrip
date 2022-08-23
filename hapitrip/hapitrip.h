@@ -58,6 +58,7 @@ public:
     ~UDP();
   void start(); // initialize HeaderStruct, bind socket, ready to receive
   void setPeerUdpPort(int port) { mPeerUdpPort = port; }
+  int getPeerUdpPort() { return mPeerUdpPort; }
   void setTest(int channels) { mTest = new TestAudio(channels); } // for test points
   void send(int8_t *audioBuf);  // send one audio packet to peer
   void stop(); // send standard JackTrip stop packet to peer
@@ -76,7 +77,7 @@ private:
   int mRing; // ring buffer length in number of packets
   std::vector<int8_t *> mRingBuffer; // ring buffer
   QHostAddress serverHostAddress; // peer
-  int mPeerUdpPort; // ephemeral peer audio port given by peer
+  int mPeerUdpPort = 0; // ephemeral peer audio port given by peer
   HeaderStruct mHeader; // packet header for the outgoing packet
   QByteArray mRcvPacket; // the incoming packet
   QByteArray mSendPacket; // the outgoing packet
@@ -197,7 +198,7 @@ private:
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
-  void connectToServer(QString server); // initiate handshake and start listening for UDP incoming
+  int connectToServer(QString server); // initiate handshake and start listening for UDP incoming
   void run(); // initiate bidirectional flows, sending UDP outgoing to server starts it sending
   void stop(); // stop the works
   void xfrBufs(float *sendBuf, float *rcvBuf); // when not using an audio callback e.g., for chuck
