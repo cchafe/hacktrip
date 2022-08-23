@@ -21,7 +21,6 @@ void MainWindow::on_connectButton_clicked() {
     updateStateFromUI(); // override params with initial UI values
     connected = false;
     connected = ht->connectToServer(mServer); // grab the next free client slot from server pool
-//    std::cout << mServer.toStdString() << " on port " << connected << std::endl;
     if (!connected) {
         QMessageBox msgBox;
         msgBox.setText("connection failed for " + mServer + "\n try another" );
@@ -44,26 +43,26 @@ void MainWindow::on_stopButton_clicked() {
 
 void MainWindow::on_serverComboBox_currentIndexChanged(const QString &arg1)
 {
-    mServer = arg1;
+    mServer = arg1; // takes effect after stop
 }
 void MainWindow::on_FPPcomboBox_currentIndexChanged(const QString &arg1)
 {
-    ht->setFPP(arg1.toInt());
+    if (!connected) ht->setFPP(arg1.toInt());
 }
 
 void MainWindow::on_channelsSpinBox_valueChanged(int arg1)
 {
-    ht->setChannels(arg1);
+    if (!connected) ht->setChannels(arg1);
 }
 
 void MainWindow::on_srateComboBox_currentIndexChanged(const QString &arg1)
 {
-    ht->setSampleRate(arg1.toInt());
+    ht->setSampleRate(arg1.toInt()); // takes effect after stop
 }
 
 void MainWindow::on_audioComboBox_currentIndexChanged(int arg1)
 {
-    ht->setRtAudioAPI(arg1);
+    ht->setRtAudioAPI(arg1); // takes effect after stop
 }
 
 void MainWindow::updateStateFromUI() {
