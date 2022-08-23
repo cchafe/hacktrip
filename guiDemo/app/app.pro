@@ -1,6 +1,7 @@
 QT       += core gui network
 include(../librtaudio/librtaudio.pri)
 include(../libhapitrip/libhapitrip.pri)
+include(../libregulator/libregulator.pri)
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17

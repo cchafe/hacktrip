@@ -75,7 +75,7 @@
       </rect>
      </property>
      <property name="value">
-      <number>1</number>
+      <number>2</number>
      </property>
     </widget>
     <widget class="QComboBox" name="FPPcomboBox">
@@ -90,6 +90,16 @@
      <item>
       <property name="text">
        <string>128</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>32</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>16</string>
       </property>
      </item>
      <item>
@@ -140,7 +150,17 @@
      </item>
      <item>
       <property name="text">
-       <string>aardvark</string>
+       <string>cmn9.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>jackloop16.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>jackloop32.stanford.edu</string>
       </property>
      </item>
     </widget>
