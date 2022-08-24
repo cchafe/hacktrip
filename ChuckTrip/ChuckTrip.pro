@@ -1,7 +1,5 @@
 QT -= gui
 QT += core network
-#include(../hapitrip/hapitrip.pri)
-#include(../coreApp/coreApp.pri)
 
 CONFIG += c++17 console
 CONFIG -= app_bundle
@@ -14,12 +12,14 @@ TARGET = ChuckTrip.chug
 
 # Input
 SOURCES += chucktrip.cpp \
-../hapitrip/hapitrip.cpp
+../hapitrip/hapitrip.cpp \
+../regulator/regulator.cpp
 
 DEFINES += "NO_AUDIO"
 
 HEADERS += ../hapitrip/hapitrip.h
-INCLUDEPATH += ../hapitrip
+INCLUDEPATH += ../hapitrip \
+../regulator/regulator.h
 
 INCLUDEPATH += .
 INCLUDEPATH += chuck/include/

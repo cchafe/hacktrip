@@ -1,9 +1,13 @@
 QT       += core gui network
 include(../librtaudio/librtaudio.pri)
 include(../libhapitrip/libhapitrip.pri)
+include(../libregulator/libregulator.pri)
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
+
+# for debug that sets -fsanitize=address and loads libasan
+# CONFIG += sanitizer sanitize_address
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.

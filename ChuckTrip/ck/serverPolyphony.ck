@@ -1,25 +1,25 @@
 // run from /home/cc/hacktrip/ChuckTrip/ck
 // export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/ChuckTrip/hapitrip/
-//chuck --chugin-path:../chugin/ --srate:48000 servers.ck 
+//chuck --chugin-path:../ --srate:48000 serverPolyphony.ck 
 //chuck --chugin-path:../chugin/ --srate:48000 --verbose:5 test.ck
 
 dac => WvOut2 w => blackhole;
-w.wavFilename("/tmp/sf.wav");
+dac.gain(5.0);
+w.wavFilename("/tmp/test.wav");
 
 class Server {
-  adc => chucktrip ct;
-  ct => Gain g => ct;
-  g.gain(0.5);
-[ ["13.40.164.125", "London"]
-, ["3.231.55.190", "Baltimore"]
+  ChuckTrip ct;
+[ 
+    ["13.40.164.125", "London"]
+  , ["3.231.55.190", "Baltimore"]
 //, ["68.66.116.192", "Boston"]
 //, ["70.224.226.152", "Los Angeles"]
 //, ["216.202.223.12", "Nashville"]
 //, ["15.181.162.127", "New York City"]
 //, ["15.220.1.14", "Portland"]
-//, ["54.176.100.97", "San Francisco"]
+  , ["54.176.100.97", "San Francisco"]
 //, ["20.125.46.74", "Seattle"]
-//, ["35.185.142.249", "Taipei"]
+, ["34.81.239.232", "Taipei"]
 ] @=> string servers[][];
   0 => int server;
   4464 => int baseLocalAudioPort;
@@ -29,7 +29,13 @@ class Server {
     servers.cap() %=> server;
     ct.localUDPAudioPort(server + baseLocalAudioPort);
     ct.connect(servers[server][0]);
-    ct => dac;
+    adc.chan(0) => ct.chan(s%2);
+  ct.chan(s%2) => Gain g => ct.chan(s%2);
+  g.gain(0.5);
+  s++;
+  ct.chan(s%2) => Gain g1 => ct.chan(s%2);
+  g1.gain(0.1);
+    ct.chan(s%2) => dac.chan(s%2);
     ct.gain(1.0);
     <<<servers[server][1], "started">>>;
   }
@@ -39,7 +45,7 @@ class Server {
     <<<servers[server][1], "stopped">>>;
   }
 }
-2 => int nServers;
+4 => int nServers;
 Server server[nServers];
 for (0 => int i; i < nServers; i++) {
   spork ~poly(i);
@@ -49,7 +55,7 @@ fun void poly(int i) {
   i*1::second => now;
   server[i].go(i);
   while (true) {
-    5::second => now;
+    50::second => now;
     server[i].stop();
     2::second => now;
     server[i].go(i);

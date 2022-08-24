@@ -56,10 +56,10 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>110</x>
       <y>10</y>
-      <width>281</width>
-      <height>301</height>
+      <width>291</width>
+      <height>331</height>
      </rect>
     </property>
     <property name="title">
@@ -68,21 +68,21 @@
     <widget class="QSpinBox" name="channelsSpinBox">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>110</y>
+       <x>160</x>
+       <y>170</y>
        <width>101</width>
        <height>21</height>
       </rect>
      </property>
      <property name="value">
-      <number>1</number>
+      <number>2</number>
      </property>
     </widget>
     <widget class="QComboBox" name="FPPcomboBox">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>70</y>
+       <x>160</x>
+       <y>130</y>
        <width>101</width>
        <height>31</height>
       </rect>
@@ -94,6 +94,16 @@
      </item>
      <item>
       <property name="text">
+       <string>32</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>16</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>256</string>
       </property>
      </item>
@@ -101,8 +111,8 @@
     <widget class="QLabel" name="label">
      <property name="geometry">
       <rect>
-       <x>80</x>
-       <y>80</y>
+       <x>100</x>
+       <y>140</y>
        <width>54</width>
        <height>17</height>
       </rect>
@@ -114,8 +124,8 @@
     <widget class="QLabel" name="label_2">
      <property name="geometry">
       <rect>
-       <x>80</x>
-       <y>110</y>
+       <x>100</x>
+       <y>170</y>
        <width>54</width>
        <height>17</height>
       </rect>
@@ -127,28 +137,38 @@
     <widget class="QComboBox" name="serverComboBox">
      <property name="geometry">
       <rect>
-       <x>70</x>
-       <y>30</y>
+       <x>100</x>
+       <y>40</y>
        <width>161</width>
        <height>31</height>
       </rect>
      </property>
      <item>
       <property name="text">
-       <string>13.40.164.125</string>
+       <string>jackloop128.stanford.edu</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>3.231.55.190</string>
+       <string>cmn9.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>jackloop16.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>jackloop32.stanford.edu</string>
       </property>
      </item>
     </widget>
     <widget class="QLabel" name="label_3">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>40</y>
+       <x>40</x>
+       <y>50</y>
        <width>54</width>
        <height>17</height>
       </rect>
@@ -160,8 +180,8 @@
     <widget class="QComboBox" name="srateComboBox">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>140</y>
+       <x>160</x>
+       <y>200</y>
        <width>101</width>
        <height>31</height>
       </rect>
@@ -175,8 +195,8 @@
     <widget class="QLabel" name="label_4">
      <property name="geometry">
       <rect>
-       <x>80</x>
-       <y>150</y>
+       <x>100</x>
+       <y>210</y>
        <width>54</width>
        <height>17</height>
       </rect>
@@ -188,8 +208,8 @@
     <widget class="QLabel" name="label_5">
      <property name="geometry">
       <rect>
-       <x>80</x>
-       <y>190</y>
+       <x>100</x>
+       <y>250</y>
        <width>54</width>
        <height>17</height>
       </rect>
@@ -201,8 +221,8 @@
     <widget class="QSpinBox" name="localUDPspinBox">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>190</y>
+       <x>160</x>
+       <y>250</y>
        <width>101</width>
        <height>21</height>
       </rect>
@@ -212,6 +232,90 @@
      </property>
      <property name="value">
       <number>4464</number>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_6">
+     <property name="geometry">
+      <rect>
+       <x>40</x>
+       <y>90</y>
+       <width>54</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>audio</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="audioComboBox">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>80</y>
+       <width>161</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="currentIndex">
+      <number>3</number>
+     </property>
+     <item>
+      <property name="text">
+       <string>UNSPECIFIED</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>MACOSX_CORE</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>LINUX_ALSA</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>UNIX_JACK</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>LINUX_PULSE</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>LINUX_OSS</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>WINDOWS_ASIO</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>WINDOWS_WASAPI</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>WINDOWS_DS</string>
+      </property>
+     </item>
+    </widget>
+    <widget class="QCheckBox" name="plcCheckBox">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>280</y>
+       <width>87</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>PLC</string>
      </property>
     </widget>
    </widget>

@@ -1,0 +1,12 @@
+#ifndef REGULATOR_GLOBAL_H
+#define REGULATOR_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(REGULATOR_LIBRARY)
+#  define REGULATOR_EXPORT Q_DECL_EXPORT
+#else
+#  define REGULATOR_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // REGULATOR_GLOBAL_H

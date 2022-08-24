@@ -8,9 +8,9 @@
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
 
-void Hapitrip::connectToServer(QString server) {
-    as.server = server; // set the server
+int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef AUDIO_ONLY
+    as.server = server; // set the server
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
     mUdp->setPeerUdpPort(mTcp->connectToServer()); // to get the server port to send to
@@ -23,23 +23,16 @@ void Hapitrip::connectToServer(QString server) {
 #ifndef NO_AUDIO
     mAudio.setTest(as.channels);
 #endif
+    return mUdp->getPeerUdpPort();
 }
 
-void Hapitrip::run() { // (before server times out in like 10 seconds)
+void Hapitrip::run() { // hit this before server times out in like 10 seconds
 #ifndef AUDIO_ONLY
     mUdp->start(); // bidirectional flows
 #endif
 #ifndef NO_AUDIO
     mAudio.start();
 #endif
-}
-
-// when not using an audio callback e.g., for chuck
-void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and send
-    if (mUdp != nullptr) {
-        mUdp->sendAudioData(sendBuf);
-        mUdp->rcvAudioData(rcvBuf);
-    }
 }
 
 void Hapitrip::stop() { // the whole show
@@ -49,15 +42,25 @@ void Hapitrip::stop() { // the whole show
 #ifndef NO_AUDIO
     mAudio.stop();
 #endif
+#ifndef AUDIO_ONLY
     delete mUdp;
     mUdp = nullptr;
+#endif
 }
 
 #ifndef AUDIO_ONLY
+// when not using an audio callback e.g., for chuck
+void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and send
+    if (mUdp != nullptr) {
+        mUdp->sendAudioData(sendBuf);
+        mUdp->rcvAudioData(rcvBuf);
+    }
+}
+
 int TCP::connectToServer() { // this is the TCP handshake
     QHostAddress serverHostAddress;
     if (!serverHostAddress.setAddress(Hapitrip::as.server)) { // DNS resolver
-        std::cout << "\nno running Qt event loop but things are ok..." << std::endl;
+        std::cout << "\nif this is a chuging, then there's no running Qt event loop but things are ok..." << std::endl;
         QHostInfo info = QHostInfo::fromName(Hapitrip::as.server);
         std::cout << "...ignore all that\n" << std::endl;
 
@@ -132,15 +135,19 @@ void UDP::start() {
         }
     }
     int ret = 0;
-    connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams); // dispatch arriving packet
     ret = bind(Hapitrip::as.localAudioUdpPort); // start listening
+    connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams); // dispatch arriving packet
     if (Hapitrip::as.verbose)
         std::cout << "UDP: start listening = " << ret << " "
-                                        << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
+                  << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
     mSendSeq = 0;
 
     mTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen]; // for when not using an audio callback
     memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
+    reg = new Regulator(Hapitrip::as.channels,
+                        Hapitrip::as.bytesPerSample,
+                        Hapitrip::as.FPP,
+                        35); // qlen needs to be param
 };
 // example system commands that show udp port in use in case of trouble starting
 // sudo lsof -i:4464
@@ -150,6 +157,7 @@ void UDP::start() {
 UDP::~UDP() {
     for (int i = 0; i < mRing; i++) delete mRingBuffer[i];
     delete mTmpAudioBuf;
+    //    delete reg; // don't delete if unused?
 }
 
 void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
@@ -169,34 +177,61 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     }
 }
 
-// when not using an audio callback e.g., for chuck
-void UDP::sendAudioData(float *buf) {
-    MY_TYPE * tmp = (MY_TYPE *)mTmpAudioBuf;
-    for (int ch = 0; ch < 1; ch++) {
-        for (int i = 0; i < Hapitrip::as.FPP; i++) {
-            *tmp++ = (MY_TYPE)(buf[i] * Hapitrip::as.scale);
-        }
+void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
+
+    //    mTest->sineTest((MY_TYPE *)buf);
+    //    mTest->printSamples((MY_TYPE *)buf);
+
+
+    if (Hapitrip::as.usePLC)
+        reg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
+    else {
+        memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
+        mWptr++;
+        mWptr %= mRing;
+    }
+}
+
+void UDP::ringBufferPull() { // pull next packet to play out from ring
+    if (Hapitrip::as.usePLC)
+        reg->pullPacket(mTmpAudioBuf);
+    //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
+    else {
+        if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
+        if (mRptr<0) mRptr += mRing;
+        mRptr %= mRing;
+        memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
+        mRptr++; // advance to the next slot
+    }
+}
+
+// when not using an audio callback e.g., for chuck these are called from its tick loop
+///////////////////////////////////////////////////
+// chuck is interleaved, so convert what it wants to send to be non-interleaved
+void UDP::sendAudioData(float *buf) { // buf from chuck is interleaved
+    MY_TYPE * tmp = (MY_TYPE *)mTmpAudioBuf; // make outgoing packet non-interleaved
+    for (int i = 0; i < Hapitrip::as.channels*Hapitrip::as.FPP; i++) {
+        int nilFr = i / Hapitrip::as.channels;
+        int nilCh = i % Hapitrip::as.channels;
+        tmp[nilCh*Hapitrip::as.FPP + nilFr] = (MY_TYPE)(buf[i] * Hapitrip::as.scale); // non-interleaved = interleaved
     }
     send(mTmpAudioBuf);
 }
-void UDP::rcvAudioData(float *buf) {
-    readPendingDatagrams();
-    if (mRptr == mWptr)
-        mRptr = mWptr - 2;
-    if (mRptr<0) mRptr += mRing;
-    mRptr %= mRing;
-    memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen);
-    mRptr++;
 
-    MY_TYPE * tmp1 = (MY_TYPE *)mTmpAudioBuf;
-    float * tmp2 = (float *)buf;
-
-    for (int ch = 0; ch < 1; ch++) {
-        for (int i = 0; i < Hapitrip::as.FPP; i++) {
-            tmp2[i] = tmp1[i] * Hapitrip::as.invScale;
-        }
+// chuck is interleaved, so non-interleaved arriving packets are converted
+void UDP::rcvAudioData(float *buf) { // buf to chuck is interleaved
+    readPendingDatagrams(); // and put in ring buffer
+    ringBufferPull();
+    //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf); // non-interleaved test signal
+    MY_TYPE * tmp1 = (MY_TYPE *)mTmpAudioBuf; // non-interleaved
+    float * tmp2 = (float *)buf; // interleaved
+    for (int i = 0; i < Hapitrip::as.channels*Hapitrip::as.FPP; i++) {
+        int nilFr = i / Hapitrip::as.channels;
+        int nilCh = i % Hapitrip::as.channels;
+        tmp2[i] = tmp1[nilCh*Hapitrip::as.FPP + nilFr] * Hapitrip::as.invScale; // interleaved = non-interleaved
     }
 }
+///////////////////////////////////////////////////
 
 void UDP::readPendingDatagrams() { // incoming is triggered from readyRead signal or from rcvAudioData
     // read datagrams in a loop to make sure that all received datagrams are processed
@@ -218,9 +253,7 @@ void UDP::readPendingDatagrams() { // incoming is triggered from readyRead signa
         int8_t *audioBuf = (int8_t *)(mRcvPacket.data() + sizeof(HeaderStruct));
         //            mTest->sineTest((MY_TYPE *)audioBuf); // output sines
         //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio signal
-        memcpy(mRingBuffer[mWptr], audioBuf, Hapitrip::as.audioDataLen); // put in ring
-        mWptr++;
-        mWptr %= mRing;
+        ringBufferPush(audioBuf, rcvSeq);
     }
 }
 
@@ -256,11 +289,8 @@ int UDP::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio
                        void * /* data */) // last arg is used for "this"
 {
     send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
-    if (mRptr == mWptr) mRptr = mRing / 2; // if there's an incoming packet stream underrun
-    mRptr %= mRing;
-    memcpy(outputBuffer, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
-    mRptr++; // advance to the next slot
-
+    ringBufferPull();
+    memcpy(outputBuffer, mTmpAudioBuf, Hapitrip::as.audioDataLen);
     // audio diagnostics, modify or print output and input buffers
     //    memcpy(outputBuffer, inputBuffer, Hapitrip::mAudioDataLen); // test
     //    straight wire mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
@@ -273,7 +303,7 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim
                                   unsigned int nBufferFrames, double streamTime,
                                   RtAudioStreamStatus status, void *arg) {
     return static_cast<UDP *>(arg)->audioCallback( // callback method
-                outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
+                                                   outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
 }
 #endif
 #else // test with the straight wire example in RtAudio examples/duplex
@@ -286,7 +316,7 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 {
     // audio diagnostics, modify or print output and input buffers
     memcpy(outputBuffer, inputBuffer,
-           Hapitrip::mAudioDataLen); // test straight wire
+           Hapitrip::as.audioDataLen); // test straight wire
     //        mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
     //        mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
 
@@ -307,9 +337,8 @@ void Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds -- (unused) from RtAudio examples/duplex
     m_streamTimePrintTime = 1.0;      // seconds -- (unused) from RtAudio examples/duplex
 
-    // various RtAudio API's, in this case it falls back to pulse if no jack daemon running
-    m_adac = new RtAudio(RtAudio::LINUX_PULSE);
-    //    m_adac = new RtAudio(RtAudio::UNIX_JACK); // jack only
+    // various RtAudio API's
+    m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI)); // reference by enum
     //    m_adac = new RtAudio(); // test with win10
 
     std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
@@ -357,7 +386,7 @@ void Audio::start() {
         std::cout << "\nCouldn't open audio device streams!\n";
 #else
     // from RtAudio examples/duplex
-    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::mSampleRate,
+    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::as.sampleRate,
                            &bufferFrames, &Audio::wrapperProcessCallback,
                            (void *)this, &options)) // specify Audio class callback
         std::cout << "\nCouldn't open audio device streams!\n";

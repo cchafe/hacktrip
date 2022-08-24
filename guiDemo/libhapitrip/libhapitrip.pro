@@ -6,6 +6,7 @@ CONFIG += c++17
 QT -= gui
 QT += network
 include(../librtaudio/librtaudio.pri)
+include(../libregulator/libregulator.pri)
 
 
 # You can make your code fail to compile if it uses deprecated APIs.
