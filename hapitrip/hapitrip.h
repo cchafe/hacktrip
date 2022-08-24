@@ -67,9 +67,9 @@ public:
     // for non-audio callback triggering of audio rcv and send e.g., chuck
     void rcvAudioData(float *buf); // readPendingDatagrams into ring and pull next packet from ring
     void sendAudioData(float *buf); // convert one bufferfull to short int and send out
-#ifndef NO_AUDIO
     void ringBufferPush(int8_t *buf, int seq); // push received packet to ring
     void ringBufferPull(); // pull next packet to play out from ring put in mTmpAudioBuf
+#ifndef NO_AUDIO
     int audioCallback(void *outputBuffer, void *inputBuffer,
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
