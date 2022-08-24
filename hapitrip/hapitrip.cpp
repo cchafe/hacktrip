@@ -147,7 +147,10 @@ void UDP::start() {
     reg = new Regulator(Hapitrip::as.channels,
                         Hapitrip::as.bytesPerSample,
                         Hapitrip::as.FPP,
-                        35); // qlen needs to be param
+                        35, // qlen needs to be param
+                        Hapitrip::as.scale, Hapitrip::as.invScale,
+                        Hapitrip::as.verbose,
+                        Hapitrip::as.audioDataLen);
 };
 // example system commands that show udp port in use in case of trouble starting
 // sudo lsof -i:4464

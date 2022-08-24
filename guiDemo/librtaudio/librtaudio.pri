@@ -12,9 +12,9 @@ LIBS += -L../librtaudio -lrtaudio -ljack -lpulse-simple -lasound -lpulse
 }
 }
 
-
+# windows seems to insist on "liblibrtaudio" even with the no_plugin_name_prefix CONFIG in the .pro
 win32 {
-LIBS += -L../rtaudio/release -lrtaudio
+LIBS += -L../librtaudio/release -llibrtaudio
 }
 DEPENDPATH += . ../librtaudio
 INCLUDEPATH += ../rtaudio
