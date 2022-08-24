@@ -37,21 +37,15 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 - merge to main
 - release 0.2
 - project layouts completed
-```
-gVersion = "0.2.1"
-```
 - merge to main
 - release 0.2.1
-## TODO:
-```
-gVersion = "0.3-rc.1"
-```
-- substitute Regulator.h and Regulator.cpp for the initial simple ring buffer
+- substitute regulator.h and regulator.cpp for the initial simple ring buffer
 - release 0.3
+## TODO:
 ```
 gVersion = "0.4-rc.1"
 ```
-- generate all of chuckTrip.cpp automatically using chuginate standard
+- generate all of ChuckTrip.cpp using chuginate automatically (not by hand)
 - release 0.4
 ```
 gVersion = "0.5-rc.1"
