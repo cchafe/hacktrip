@@ -56,10 +56,10 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>110</x>
       <y>10</y>
-      <width>281</width>
-      <height>301</height>
+      <width>291</width>
+      <height>331</height>
      </rect>
     </property>
     <property name="title">
@@ -304,6 +304,19 @@
        <string>WINDOWS_DS</string>
       </property>
      </item>
+    </widget>
+    <widget class="QCheckBox" name="plcCheckBox">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>280</y>
+       <width>87</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>PLC</string>
+     </property>
     </widget>
    </widget>
   </widget>

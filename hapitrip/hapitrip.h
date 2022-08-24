@@ -165,6 +165,7 @@ class APIsettings {
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
+    static const bool dUsePLC = 0;
 #endif
 
 private:
@@ -189,6 +190,7 @@ private:
     int ringBufferLength = dRingBufferLength;
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
+    bool usePLC = dUsePLC;
 
     QString server = NULL; // the server name or IP address
     friend class TCP;
@@ -227,6 +229,9 @@ public:
 
     int getSampleRate() { return as.sampleRate; }
     void setSampleRate(int srate) { as.sampleRate = srate; }
+
+    int getUsePLC() { return as.usePLC; }
+    void setUsePLC(int use) { as.usePLC = use; }
 
 #ifndef AUDIO_ONLY
     int getLocalUDPaudioPort() { return as.localAudioUdpPort; };

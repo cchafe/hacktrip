@@ -36,6 +36,8 @@ private slots:
 
   void on_audioComboBox_currentIndexChanged(const int arg1);
 
+  void on_plcCheckBox_stateChanged(int arg1);
+
 private:
   Ui::MainWindow *ui;
   Hapitrip *ht;

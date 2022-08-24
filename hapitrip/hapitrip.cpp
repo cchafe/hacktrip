@@ -147,7 +147,7 @@ void UDP::start() {
     reg = new Regulator(Hapitrip::as.channels,
                         Hapitrip::as.bytesPerSample,
                         Hapitrip::as.FPP,
-                        20); // qlen needs to be param
+                        35); // qlen needs to be param
 };
 // example system commands that show udp port in use in case of trouble starting
 // sudo lsof -i:4464
@@ -157,7 +157,7 @@ void UDP::start() {
 UDP::~UDP() {
     for (int i = 0; i < mRing; i++) delete mRingBuffer[i];
     delete mTmpAudioBuf;
-//    delete reg; // don't delete if unused?
+    //    delete reg; // don't delete if unused?
 }
 
 void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
@@ -177,33 +177,32 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     }
 }
 
-#define REG
 void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
 
-//    mTest->sineTest((MY_TYPE *)buf);
-//    mTest->printSamples((MY_TYPE *)buf);
+    //    mTest->sineTest((MY_TYPE *)buf);
+    //    mTest->printSamples((MY_TYPE *)buf);
 
-#ifdef REG
-    reg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
-#else
-    memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
-    mWptr++;
-    mWptr %= mRing;
-#endif
+
+    if (Hapitrip::as.usePLC)
+        reg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
+    else {
+        memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
+        mWptr++;
+        mWptr %= mRing;
+    }
 }
 
 void UDP::ringBufferPull() { // pull next packet to play out from ring
-
-#ifdef REG
-    reg->pullPacket(mTmpAudioBuf);
-//    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
-#else
-    if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
-    if (mRptr<0) mRptr += mRing;
-    mRptr %= mRing;
-    memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
-    mRptr++; // advance to the next slot
-#endif
+    if (Hapitrip::as.usePLC)
+        reg->pullPacket(mTmpAudioBuf);
+    //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
+    else {
+        if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
+        if (mRptr<0) mRptr += mRing;
+        mRptr %= mRing;
+        memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
+        mRptr++; // advance to the next slot
+    }
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
