@@ -60,7 +60,7 @@ void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and
 int TCP::connectToServer() { // this is the TCP handshake
     QHostAddress serverHostAddress;
     if (!serverHostAddress.setAddress(Hapitrip::as.server)) { // DNS resolver
-        std::cout << "\nif this is a chuging, then there's no running Qt event loop but things are ok..." << std::endl;
+        std::cout << "\nif this is a chugin, then there's no running Qt event loop but things are ok..." << std::endl;
         QHostInfo info = QHostInfo::fromName(Hapitrip::as.server);
         std::cout << "...ignore all that\n" << std::endl;
 

@@ -60,7 +60,7 @@ public:
 
     t_CKFLOAT connect(char *filename)
     {
-//        fprintf(stderr,"%s",filename);
+        //        fprintf(stderr,"%s",filename);
         ht = new Hapitrip();
         ht->connectToServer(filename);
         ht->run();
@@ -79,7 +79,7 @@ public:
         return(0.0);
     }
 
-/*
+    /*
 mono tick sample version
     SAMPLE tick(SAMPLE in)
     {
@@ -99,22 +99,22 @@ mono tick sample version
 
     void tick( SAMPLE * in, SAMPLE * out, int nframes ) // nframes = 1
     {
-    // needs work if more than stereo
-      int nChans = 2; // need to add a method to set from Hapitrip::as.channels
+        // needs work if more than stereo
+        int nChans = 1; // need to add a method to set from Hapitrip::as.channels
         m_x = m_x + m_epsilon*m_y;
         m_y = -m_epsilon*m_x + m_y;
         m_sampleCount %= m_FPP;
-      memset(out, 0, sizeof(SAMPLE)*nChans*nframes);
-      for (int i=0; i < nframes; i+=nChans)
-	{
-	  m_sendBuffer[m_sampleCount*nChans] = in[i];
-	  m_sendBuffer[m_sampleCount*nChans+1] = in[i+1];
-	  out[i] = m_rcvBuffer[m_sampleCount*nChans];
-	  out[i+1] = m_rcvBuffer[m_sampleCount*nChans+1];
-	}
+        memset(out, 0, sizeof(SAMPLE)*nChans*nframes);
+        for (int i=0; i < nframes; i+=nChans)
+        {
+            m_sendBuffer[m_sampleCount*nChans] = in[i];
+            m_sendBuffer[m_sampleCount*nChans+1] = in[i+1];
+            out[i] = m_rcvBuffer[m_sampleCount*nChans];
+            out[i+1] = m_rcvBuffer[m_sampleCount*nChans+1];
+        }
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {
-           ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
+            ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
         }
     }
     
@@ -160,7 +160,7 @@ CK_DLL_QUERY(ChuckTrip)
     
     // QUERY->add_ugen_func(QUERY, ChuckTrip_tick, NULL, 1, 1);
     QUERY->add_ugen_funcf(QUERY, ChuckTrip_tick, NULL, 2, 2);
-        
+
     QUERY->add_mfun(QUERY, ChuckTrip_setFreq, "float", "freq");
     QUERY->add_arg(QUERY, "float", "arg");
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
@@ -225,7 +225,7 @@ CK_DLL_TICKF(ChuckTrip_tick)
 {
     // get our c++ class pointer
     ChuckTrip * c = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
- 
+
     // invoke our tick function; store in the magical out variable
     if(c) c->tick(in,out, nframes);
 
