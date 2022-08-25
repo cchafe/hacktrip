@@ -13,11 +13,11 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 ## code examples (all are qt projects, supported by qt creator workflow)
 - app called "app" 
   - minimal GUI (qt designer)
-  - hapitrip and rtaudio included via shared libraries
+  - hapitrip, rtaudio and regulator are included via shared libraries
     - open in creator project file guiDemo/guiDemo.pro
     - executable is app/app
 - plugin called "ChuckTrip" is a chuck chugin accessible from chuck scripts 
-  - this version is with hapitrip compiled in for ease of chucking (but shared lib tests ok, too)
+  - this version is with hapitrip and regulator compiled in for ease of chucking (but shared lib tests ok, too)
     - open in creator project file ChuckTrip/ChuckTrip.pro
     - chugin is ChuckTrip/ChuckTrip.chug
     - example chuck scripts in chucktrip/ck/
