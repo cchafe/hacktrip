@@ -6,6 +6,6 @@ win32 {
 LIBS += -L../libregulator/release -lregulator
 }
 
-DEPENDPATH += . ../libregulator ../librtaudio
+DEPENDPATH += . ../libregulator
 INCLUDEPATH += ../../regulator
 

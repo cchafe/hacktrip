@@ -3,7 +3,6 @@
 #include <ios>
 #include <iomanip>
 #include <sstream>
-#include "hapitrip.h"
 
 // constants...
 constexpr int HIST          = 4;    // for mono at FPP 16-128, see below for > mono, > 128
@@ -19,6 +18,8 @@ constexpr double AutoInitValFactor =
 // tweak
 constexpr int WindowDivisor = 8;     // for faster auto tracking
 constexpr int MaxFPP        = 1024;  // tested up to this FPP
+typedef signed short MY_TYPE; // audio interface data is 16bit ints (using MY_TYPE from rtaudio)
+
 //*******************************************************************************
 Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen,
                      double scale, double invScale, bool verbose, double audioDataLen)
