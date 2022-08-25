@@ -145,7 +145,7 @@ class APIsettings {
     // default values
     static const int dRtAudioAPI = 3;
     static const int dSampleRate = 48000;
-    static const int dFPP = 128;
+    static const int dFPP = 256;
     static const int dChannels = 2;
     static const int dBytesPerSample = sizeof(MY_TYPE);
     static const int dAudioDataLen = dFPP * dChannels * dBytesPerSample;
