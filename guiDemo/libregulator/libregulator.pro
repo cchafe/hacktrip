@@ -5,7 +5,7 @@ CONFIG      += link_pkgconfig plugin no_plugin_name_prefix
 CONFIG += c++17
 QT -= gui
 QT += network
-include(../libhapitrip/libhapitrip.pri)
+#include(../libhapitrip/libhapitrip.pri)
 
 
 # You can make your code fail to compile if it uses deprecated APIs.
