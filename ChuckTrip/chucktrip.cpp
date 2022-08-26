@@ -108,9 +108,9 @@ mono tick sample version
         for (int i=0; i < nframes; i+=nChans)
         {
             m_sendBuffer[m_sampleCount*nChans] = in[i];
-            m_sendBuffer[m_sampleCount*nChans+1] = in[i+1];
+//            m_sendBuffer[m_sampleCount*nChans+1] = in[i+1];
             out[i] = m_rcvBuffer[m_sampleCount*nChans];
-            out[i+1] = m_rcvBuffer[m_sampleCount*nChans+1];
+//            out[i+1] = m_rcvBuffer[m_sampleCount*nChans+1];
         }
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {
