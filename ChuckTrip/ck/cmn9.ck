@@ -24,7 +24,7 @@ class Server {
   }
 }
 
-1 => int nClients;
+12 => int nClients;
 Server servers[nClients];
 
 for (0 => int i; i < nClients; i++) {
