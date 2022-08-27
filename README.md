@@ -45,7 +45,8 @@ hacktrip is a hub client written from scratch and hopefully a handy tutorial, to
 ```
 gVersion = "0.4-rc.1"
 ```
-- generate all of ChuckTrip.cpp using chuginate automatically (not by hand)
+- generate existing ChuckTrip.cpp automatically (not by hand)
+- generate the full API so its equivalent to guiDemo
 - release 0.4
 ```
 gVersion = "0.5-rc.1"
