@@ -1,5 +1,6 @@
-// this file was automatically generated with 
- // chuck -s chuck -s template.ck genChug.ck 
+/*----------------------------------------------------------------------------
+ ChucK to ChuckTrip
+ -----------------------------------------------------------------------------*/
 
 #include "chuck_dl.h"
 #include "chuck_def.h"
@@ -17,6 +18,7 @@ CK_DLL_DTOR(ChuckTrip_dtor);
 CK_DLL_MFUN(ChuckTrip_setFreq);
 CK_DLL_MFUN(ChuckTrip_getFreq);
 
+// CK_DLL_TICK(ChuckTrip_tick);
 CK_DLL_TICKF(ChuckTrip_tick);
 CK_DLL_MFUN(ChuckTrip_connect);
 CK_DLL_MFUN(ChuckTrip_disconnect);
@@ -26,8 +28,6 @@ CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort);
 CK_DLL_MFUN(ChuckTrip_getFPP);
 
 t_CKINT ChuckTrip_data_offset = 0;
-
-CK_DLL_MFUN(ChuckTrip_sayHi);
 
 class ChuckTrip
 {
@@ -48,8 +48,8 @@ public:
             m_rcvBuffer[i] = 0.0;
         }
         m_sampleCount = 0;
+    }
 
-}
     ~ChuckTrip ()
     {
         fprintf(stderr,"ChuckTrip dtor reached!! \n");
@@ -78,6 +78,24 @@ public:
         ht->setLocalUDPaudioPort(port);
         return(0.0);
     }
+
+    /*
+mono tick sample version
+    SAMPLE tick(SAMPLE in)
+    {
+        m_sampleCount %= m_FPP;
+        m_sendBuffer[m_sampleCount] = in;
+        t_CKFLOAT out = m_rcvBuffer[m_sampleCount];
+        m_x = m_x + m_epsilon*m_y;
+        m_y = -m_epsilon*m_x + m_y;
+        //        m_sendBuffer[m_sampleCount] = m_y; // internal magic sine
+        m_sampleCount++;
+        if (m_sampleCount==m_FPP) {
+            ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
+        }
+        return out;
+    }
+*/
 
     void tick( SAMPLE * in, SAMPLE * out, int nframes ) // nframes = 1
     {
@@ -115,14 +133,7 @@ public:
         return m_FPP;
     }
 
-    t_CKINT sayHi() {
-        fprintf(stderr,"ChuckTrip Hi \n");
-        return 0;
-    }
-
-public:
     char * m_server;
-
 private:
     SAMPLE m_x, m_y;
     t_CKFLOAT m_fs;
@@ -133,7 +144,6 @@ private:
     t_CKINT m_sampleCount;
     float *m_sendBuffer;
     float *m_rcvBuffer;
-
 };
 
 CK_DLL_QUERY(ChuckTrip)
@@ -141,7 +151,9 @@ CK_DLL_QUERY(ChuckTrip)
     QUERY->setname(QUERY, "ChuckTrip");
     
     QUERY->begin_class(QUERY, "ChuckTrip", "UGen");
-    QUERY->doc_class(QUERY, "Fast, recursive sine wave generator using the so-called &quot;magic circle&quot; algorithm ");
+    QUERY->doc_class(QUERY, "Fast, recursive sine wave generator using the so-called &quot;magic circle&quot; algorithm (see <a href=\"https://ccrma.stanford.edu/~jos/pasp/Digital_Sinusoid_Generators.html\">https://ccrma.stanford.edu/~jos/pasp/Digital_Sinusoid_Generators.html</a>). "
+                            "Can be 30-40% faster than regular SinOsc. "
+                            "Frequency modulation will negate this performance benefit; most useful when pure sine tones are desired or for additive synthesis. ");
     
     QUERY->add_ctor(QUERY, ChuckTrip_ctor);
     QUERY->add_dtor(QUERY, ChuckTrip_dtor);
@@ -169,15 +181,13 @@ CK_DLL_QUERY(ChuckTrip)
     QUERY->add_mfun(QUERY, ChuckTrip_getFPP, "int", "fpp");
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
-    QUERY->add_mfun(QUERY, ChuckTrip_sayHi, "int", "hi");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
-
     ChuckTrip_data_offset = QUERY->add_mvar(QUERY, "int", "@ChuckTrip_data", false);
     
     QUERY->end_class(QUERY);
 
     return TRUE;
 }
+
 
 CK_DLL_CTOR(ChuckTrip_ctor)
 {
@@ -190,7 +200,7 @@ CK_DLL_CTOR(ChuckTrip_ctor)
 
 CK_DLL_DTOR(ChuckTrip_dtor)
 {
-    std::cout << "ChuckTrip: destructor !!" << std::endl;
+    std::cout << "ChuckTrip: !!" << std::endl;
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     if(bcdata)
     {
@@ -200,6 +210,16 @@ CK_DLL_DTOR(ChuckTrip_dtor)
     }
 }
 
+/*
+CK_DLL_TICK(ChuckTrip_tick)
+{
+    ChuckTrip * c = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    
+    if(c) *out = c->tick(in);
+
+    return TRUE;
+}
+*/
 // implementation for tick function
 CK_DLL_TICKF(ChuckTrip_tick)
 {
@@ -216,6 +236,7 @@ CK_DLL_TICKF(ChuckTrip_tick)
 CK_DLL_MFUN(ChuckTrip_setFreq)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    // TODO: sanity check
     RETURN->v_float = bcdata->setFreq(GET_NEXT_FLOAT(ARGS));
 }
 
@@ -230,6 +251,7 @@ CK_DLL_MFUN(ChuckTrip_connect)
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     bcdata->m_server = (char *)GET_NEXT_STRING(ARGS)->c_str();
     RETURN->v_float = bcdata->connect(bcdata->m_server);
+    //    RETURN->v_float = bcdata->connect((char *)GET_NEXT_STRING(ARGS)->c_str());
 }
 
 CK_DLL_MFUN(ChuckTrip_disconnect)
@@ -248,10 +270,4 @@ CK_DLL_MFUN(ChuckTrip_getFPP)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     RETURN->v_int = bcdata->getFPP();
-}
-
-CK_DLL_MFUN(ChuckTrip_sayHi)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_int = bcdata->sayHi();
 }

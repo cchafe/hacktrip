@@ -5,7 +5,7 @@
 
 ChuckTrip ct => dac;
 ct.connect("jackloop256.stanford.edu");
-
+ct.hi();
 while (true) {
 6::second => now;
 ct.disconnect();
