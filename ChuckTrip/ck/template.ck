@@ -266,5 +266,32 @@ CK_DLL_MFUN(ChuckTrip_getFPP)
 }
 " => string STATIC_IMPLEMENTATIONS; ////////////////////////////////////////////
 
+/////////////////////////////
+fun void newFun (string name, string callWith, string body) {
+"
+CK_DLL_MFUN(ChuckTrip_"+name+");
+" +=> STATIC_DECLARATIONS;
+
+"
+    t_CKINT "+name+"() {
+        "+body+"
+        return 0;
+    }
+" +=> CLASS_PUBLIC_METHODS;
+
+"
+    QUERY->add_mfun(QUERY, ChuckTrip_"+name+", \"int\", \""+callWith+"\");
+    QUERY->doc_func(QUERY, \"Oscillator frequency [Hz]. \");
+" +=> QUERY_CLASS;
+
+"
+CK_DLL_MFUN(ChuckTrip_"+name+")
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_int = bcdata->"+name+"();
+}
+" +=> STATIC_IMPLEMENTATIONS;
+}
+/////////////////////////////
 }
 

@@ -29,6 +29,8 @@ t_CKINT ChuckTrip_data_offset = 0;
 
 CK_DLL_MFUN(ChuckTrip_sayHi);
 
+CK_DLL_MFUN(ChuckTrip_sayBye);
+
 class ChuckTrip
 {
 public:
@@ -116,7 +118,12 @@ public:
     }
 
     t_CKINT sayHi() {
-        fprintf(stderr,"ChuckTrip Hi \n");
+          fprintf(stderr,"ChuckTrip Hi \n");  
+        return 0;
+    }
+
+    t_CKINT sayBye() {
+          fprintf(stderr,"ChuckTrip Bye \n");  
         return 0;
     }
 
@@ -170,6 +177,9 @@ CK_DLL_QUERY(ChuckTrip)
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
     QUERY->add_mfun(QUERY, ChuckTrip_sayHi, "int", "hi");
+    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_sayBye, "int", "bye");
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
     ChuckTrip_data_offset = QUERY->add_mvar(QUERY, "int", "@ChuckTrip_data", false);
@@ -254,4 +264,10 @@ CK_DLL_MFUN(ChuckTrip_sayHi)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     RETURN->v_int = bcdata->sayHi();
+}
+
+CK_DLL_MFUN(ChuckTrip_sayBye)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_int = bcdata->sayBye();
 }

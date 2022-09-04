@@ -8,30 +8,8 @@ fout.open("../chucktrip.cpp",FileIO.WRITE);
 fout <= "// this file was automatically generated with \n // chuck -s chuck -s template.ck genChug.ck \n";
 Template t;
 
-"
-CK_DLL_MFUN(ChuckTrip_sayHi);
-" +=> t.STATIC_DECLARATIONS;
-
-"
-    t_CKINT sayHi() {
-        fprintf(stderr,\"ChuckTrip Hi \\n\");
-        return 0;
-    }
-" +=> t.CLASS_PUBLIC_METHODS;
-
-"
-    QUERY->add_mfun(QUERY, ChuckTrip_sayHi, \"int\", \"hi\");
-    QUERY->doc_func(QUERY, \"Oscillator frequency [Hz]. \");
-" +=> t.QUERY_CLASS;
-
-"
-CK_DLL_MFUN(ChuckTrip_sayHi)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_int = bcdata->sayHi();
-}
-" +=> t.STATIC_IMPLEMENTATIONS;
-
+t.newFun("sayHi", "hi", "  fprintf(stderr,\"ChuckTrip Hi \\n\");  ");
+t.newFun("sayBye", "bye", "  fprintf(stderr,\"ChuckTrip Bye \\n\");  ");
 
 
 
