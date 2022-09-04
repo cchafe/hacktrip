@@ -8,15 +8,9 @@ fout.open("../chucktrip.cpp",FileIO.WRITE);
 fout <= "// this file was automatically generated with \n // chuck -s chuck -s template.ck genChug.ck \n";
 Template t;
 
-t.newFun("sayHi", "hi", "  fprintf(stderr,\"ChuckTrip Hi \\n\");  ");
-t.newFun("sayBye", "bye", "  fprintf(stderr,\"ChuckTrip Bye \\n\");  ");
-
-
-
-
-
-
-
+t.newFun("hi", "void", "  fprintf(stderr,\"ChuckTrip Hi \\n\");  ", "prints --hi-- msg");
+t.newFun("bye", "void", "  fprintf(stderr,\"ChuckTrip Bye \\n\");  ", "prints --bye-- msg");
+t.newFun("htFPP", "float", "  = ht->getFPP();  ", "prints --htFPP--");
 
 fout <= t.INCLUDES;
 fout <= t.STATIC_DECLARATIONS;

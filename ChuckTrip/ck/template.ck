@@ -267,28 +267,45 @@ CK_DLL_MFUN(ChuckTrip_getFPP)
 " => string STATIC_IMPLEMENTATIONS; ////////////////////////////////////////////
 
 /////////////////////////////
-fun void newFun (string name, string callWith, string body) {
+fun void newFun (string name, string returnType, string body, string docText) {
+  name => string callWith; // callWith could be set differently
+  "void" => string methodReturnType;
+  "" => string methodReturnCode;
+  "" => string methodReturnVar;
+  "" => string staticReturnCode;
+  if (returnType=="int") {
+    "t_CKINT" => methodReturnType;
+    "int rtnInt "  => methodReturnVar; // reserved var rtnInt for magic
+    "return rtnInt;" => methodReturnCode; // reserved var rtnInt for magic
+    "RETURN->v_int = " => staticReturnCode; // chuck magic 
+  }
+  if (returnType=="float") {
+    "t_CKFLOAT" => methodReturnType;
+    "float rtnFloat "  => methodReturnVar; // reserved var rtnInt for magic
+    "return rtnFloat;" => methodReturnCode; // reserved var rtnInt for magic
+    "RETURN->v_float = " => staticReturnCode; // chuck magic 
+  }
 "
 CK_DLL_MFUN(ChuckTrip_"+name+");
 " +=> STATIC_DECLARATIONS;
 
 "
-    t_CKINT "+name+"() {
-        "+body+"
-        return 0;
+    "+methodReturnType+" "+name+"() {
+        "+methodReturnVar+body+"
+       "+methodReturnCode+"
     }
 " +=> CLASS_PUBLIC_METHODS;
 
 "
-    QUERY->add_mfun(QUERY, ChuckTrip_"+name+", \"int\", \""+callWith+"\");
-    QUERY->doc_func(QUERY, \"Oscillator frequency [Hz]. \");
+    QUERY->add_mfun(QUERY, ChuckTrip_"+name+", \""+returnType+"\", \""+callWith+"\");
+    QUERY->doc_func(QUERY, \""+name+": "+docText+"\");
 " +=> QUERY_CLASS;
 
 "
 CK_DLL_MFUN(ChuckTrip_"+name+")
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_int = bcdata->"+name+"();
+    "+staticReturnCode+"bcdata->"+name+"();
 }
 " +=> STATIC_IMPLEMENTATIONS;
 }

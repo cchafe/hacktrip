@@ -6,6 +6,7 @@
 ChuckTrip ct => dac;
 ct.connect("jackloop256.stanford.edu");
 ct.hi();
+<<<ct.htFPP()>>>;
 while (true) {
 6::second => now;
 ct.disconnect();

@@ -27,9 +27,11 @@ CK_DLL_MFUN(ChuckTrip_getFPP);
 
 t_CKINT ChuckTrip_data_offset = 0;
 
-CK_DLL_MFUN(ChuckTrip_sayHi);
+CK_DLL_MFUN(ChuckTrip_hi);
 
-CK_DLL_MFUN(ChuckTrip_sayBye);
+CK_DLL_MFUN(ChuckTrip_bye);
+
+CK_DLL_MFUN(ChuckTrip_htFPP);
 
 class ChuckTrip
 {
@@ -117,14 +119,19 @@ public:
         return m_FPP;
     }
 
-    t_CKINT sayHi() {
+    void hi() {
           fprintf(stderr,"ChuckTrip Hi \n");  
-        return 0;
+       
     }
 
-    t_CKINT sayBye() {
+    void bye() {
           fprintf(stderr,"ChuckTrip Bye \n");  
-        return 0;
+       
+    }
+
+    t_CKFLOAT htFPP() {
+        float rtnFloat   = ht->getFPP();  
+       return rtnFloat;
     }
 
 public:
@@ -176,11 +183,14 @@ CK_DLL_QUERY(ChuckTrip)
     QUERY->add_mfun(QUERY, ChuckTrip_getFPP, "int", "fpp");
     QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
-    QUERY->add_mfun(QUERY, ChuckTrip_sayHi, "int", "hi");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
+    QUERY->add_mfun(QUERY, ChuckTrip_hi, "void", "hi");
+    QUERY->doc_func(QUERY, "hi: prints --hi-- msg");
 
-    QUERY->add_mfun(QUERY, ChuckTrip_sayBye, "int", "bye");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
+    QUERY->add_mfun(QUERY, ChuckTrip_bye, "void", "bye");
+    QUERY->doc_func(QUERY, "bye: prints --bye-- msg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_htFPP, "float", "htFPP");
+    QUERY->doc_func(QUERY, "htFPP: prints --htFPP--");
 
     ChuckTrip_data_offset = QUERY->add_mvar(QUERY, "int", "@ChuckTrip_data", false);
     
@@ -260,14 +270,20 @@ CK_DLL_MFUN(ChuckTrip_getFPP)
     RETURN->v_int = bcdata->getFPP();
 }
 
-CK_DLL_MFUN(ChuckTrip_sayHi)
+CK_DLL_MFUN(ChuckTrip_hi)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_int = bcdata->sayHi();
+    bcdata->hi();
 }
 
-CK_DLL_MFUN(ChuckTrip_sayBye)
+CK_DLL_MFUN(ChuckTrip_bye)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_int = bcdata->sayBye();
+    bcdata->bye();
+}
+
+CK_DLL_MFUN(ChuckTrip_htFPP)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_float = bcdata->htFPP();
 }
