@@ -5,9 +5,9 @@
 
 ChuckTrip ct => dac;
 "jackloop256.stanford.edu" => string server;
-
+ct.setLocalUDPaudioPort(4465);
 ct.connectTo(server);
-<<<ct.htFPP()>>>;
+<<<ct.getFPP()>>>;
 while (true) {
 6::second => now;
 ct.disconnect();

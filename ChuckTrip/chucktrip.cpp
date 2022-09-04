@@ -13,29 +13,17 @@
 
 CK_DLL_CTOR(ChuckTrip_ctor);
 CK_DLL_DTOR(ChuckTrip_dtor);
-
-CK_DLL_MFUN(ChuckTrip_setFreq);
-CK_DLL_MFUN(ChuckTrip_getFreq);
-
 CK_DLL_TICKF(ChuckTrip_tick);
-CK_DLL_MFUN(ChuckTrip_connect);
-CK_DLL_MFUN(ChuckTrip_disconnect);
-
-CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort);
-
-CK_DLL_MFUN(ChuckTrip_getFPP);
 
 t_CKINT ChuckTrip_data_offset = 0;
 
-CK_DLL_MFUN(ChuckTrip_hi);
-
-CK_DLL_MFUN(ChuckTrip_bye);
-
-CK_DLL_MFUN(ChuckTrip_htFPP);
-
-CK_DLL_MFUN(ChuckTrip_printSomeString);
+CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort);
 
 CK_DLL_MFUN(ChuckTrip_connectTo);
+
+CK_DLL_MFUN(ChuckTrip_disconnect);
+
+CK_DLL_MFUN(ChuckTrip_getFPP);
 
 class ChuckTrip
 {
@@ -44,9 +32,6 @@ public:
     ChuckTrip(float fs)
     {
         m_fs = fs;
-        setFreq(440); // internal magic sine
-        m_x = 1;
-        m_y = 0;
         m_FPP = ht->getFPP();
         m_sendBuffer = new float[m_FPP * 2]; // garnered from pitchtrack chugin
         m_rcvBuffer = new float[m_FPP * 2];
@@ -66,33 +51,11 @@ public:
         free(m_rcvBuffer);
     }
 
-    t_CKFLOAT connect(char *filename)
-    {
-        //        fprintf(stderr,"%s",filename);
-        ht = new Hapitrip();
-        ht->connectToServer(filename);
-        ht->run();
-        return(0.0);
-    }
-
-    t_CKFLOAT disconnect()
-    {
-        ht->stop();
-        return(0.0);
-    }
-
-    t_CKFLOAT setLocalUDPaudioPort(int port)
-    {
-        ht->setLocalUDPaudioPort(port);
-        return(0.0);
-    }
 
     void tick( SAMPLE * in, SAMPLE * out, int nframes ) // nframes = 1
     {
         // needs work if more than stereo
         int nChans = 2; // need to add a method to set from Hapitrip::as.channels
-        m_x = m_x + m_epsilon*m_y;
-        m_y = -m_epsilon*m_x + m_y;
         m_sampleCount %= m_FPP;
         memset(out, 0, sizeof(SAMPLE)*nChans*nframes);
         for (int i=0; i < nframes; i+=nChans)
@@ -108,39 +71,9 @@ public:
         }
     }
     
-    t_CKFLOAT setFreq(t_CKFLOAT f)
-    {
-        m_freq = f;
-        m_epsilon = 2.0*sin(2.0*ONE_PI*(m_freq/m_fs)/2.0);
-        return m_freq;
-    }
 
-    t_CKFLOAT getFreq() {
-        return m_freq;
-    }
-
-    t_CKINT getFPP() {
-        return m_FPP;
-    }
-
-    void hi( ) {
-          fprintf(stderr,"ChuckTrip Hi \n");  
-       // void function
-    }
-
-    void bye( ) {
-          fprintf(stderr,"ChuckTrip Bye \n");  
-       // void function
-    }
-
-    t_CKINT htFPP( ) {
-        int rtnInt   = ht->getFPP();  
-       return rtnInt;
-    }
-
-    void printSomeString(QString word) {
-          fprintf(stderr,"ChuckTrip %s \n", 
-  word.toStdString().c_str());  
+    void setLocalUDPaudioPort(int udpPort) {
+        ht->setLocalUDPaudioPort(udpPort);
        // void function
     }
 
@@ -151,14 +84,21 @@ public:
        // void function
     }
 
+    void disconnect( ) {
+        ht->stop();
+       // void function
+    }
+
+    t_CKINT getFPP( ) {
+        int rtnInt =  m_FPP; 
+       return rtnInt;
+    }
+
 public:
     char * m_server;
 
 private:
-    SAMPLE m_x, m_y;
     t_CKFLOAT m_fs;
-    t_CKFLOAT m_freq;
-    t_CKFLOAT m_epsilon;
     t_CKINT m_FPP;
     Hapitrip *ht;
     t_CKINT m_sampleCount;
@@ -180,42 +120,19 @@ CK_DLL_QUERY(ChuckTrip)
     // QUERY->add_ugen_func(QUERY, ChuckTrip_tick, NULL, 1, 1);
     QUERY->add_ugen_funcf(QUERY, ChuckTrip_tick, NULL, 2, 2);
 
-    QUERY->add_mfun(QUERY, ChuckTrip_setFreq, "float", "freq");
-    QUERY->add_arg(QUERY, "float", "arg");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_getFreq, "float", "freq");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_connect, "void", "connect");
-    QUERY->add_arg(QUERY, "string", "name" );
-    QUERY->doc_func(QUERY, "Server name. ");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_disconnect, "void", "disconnect");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_setLocalUDPaudioPort, "int", "localUDPAudioPort");
+    QUERY->add_mfun(QUERY, ChuckTrip_setLocalUDPaudioPort, "void", "setLocalUDPaudioPort");
+    QUERY->doc_func(QUERY, "setLocalUDPaudioPort: sets local UDP port for incoming stream");
     QUERY->add_arg(QUERY, "int", "arg");
-    QUERY->doc_func(QUERY, "LocalUDPaudioPort. ");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_getFPP, "int", "fpp");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_hi, "void", "hi");
-    QUERY->doc_func(QUERY, "hi: prints --hi-- msg");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_bye, "void", "bye");
-    QUERY->doc_func(QUERY, "bye: prints --bye-- msg");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_htFPP, "int", "htFPP");
-    QUERY->doc_func(QUERY, "htFPP: prints --htFPP--");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_printSomeString, "void", "printSomeString");
-    QUERY->doc_func(QUERY, "printSomeString: prints --bye-- msg");
-    QUERY->add_arg(QUERY, "string", "arg");
 
     QUERY->add_mfun(QUERY, ChuckTrip_connectTo, "void", "connectTo");
     QUERY->doc_func(QUERY, "connectTo: connects to hub server and runs");
     QUERY->add_arg(QUERY, "string", "arg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_disconnect, "void", "disconnect");
+    QUERY->doc_func(QUERY, "disconnect: disconnects from hub server");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_getFPP, "int", "getFPP");
+    QUERY->doc_func(QUERY, "getFPP: returns innternal FPP");
 
     ChuckTrip_data_offset = QUERY->add_mvar(QUERY, "int", "@ChuckTrip_data", false);
     
@@ -258,69 +175,26 @@ CK_DLL_TICKF(ChuckTrip_tick)
     return TRUE;
 }
 
-CK_DLL_MFUN(ChuckTrip_setFreq)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->setFreq(GET_NEXT_FLOAT(ARGS));
-}
-
-CK_DLL_MFUN(ChuckTrip_getFreq)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->getFreq();
-}
-
-CK_DLL_MFUN(ChuckTrip_connect)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    bcdata->m_server = (char *)GET_NEXT_STRING(ARGS)->c_str();
-    RETURN->v_float = bcdata->connect(bcdata->m_server);
-}
-
-CK_DLL_MFUN(ChuckTrip_disconnect)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->disconnect();
-}
-
 CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->setLocalUDPaudioPort(GET_NEXT_INT(ARGS));
-}
-
-CK_DLL_MFUN(ChuckTrip_getFPP)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_int = bcdata->getFPP();
-}
-
-CK_DLL_MFUN(ChuckTrip_hi)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    bcdata->hi();
-}
-
-CK_DLL_MFUN(ChuckTrip_bye)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    bcdata->bye();
-}
-
-CK_DLL_MFUN(ChuckTrip_htFPP)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_int = bcdata->htFPP();
-}
-
-CK_DLL_MFUN(ChuckTrip_printSomeString)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    bcdata->printSomeString(GET_NEXT_STRING(ARGS)->c_str());
+    bcdata->setLocalUDPaudioPort(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_MFUN(ChuckTrip_connectTo)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     bcdata->connectTo(GET_NEXT_STRING(ARGS)->c_str());
+}
+
+CK_DLL_MFUN(ChuckTrip_disconnect)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    bcdata->disconnect();
+}
+
+CK_DLL_MFUN(ChuckTrip_getFPP)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_int = bcdata->getFPP();
 }

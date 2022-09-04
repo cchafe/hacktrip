@@ -1,5 +1,6 @@
 // run from /home/cc/hacktrip/ChuckTrip/ck
 // chuck -s template.ck genChug.ck 
+// chuck -s newTemplate.ck genChug.ck 
 
 <<<"replacing ../chucktrip.cpp">>>;
 FileIO fout;
@@ -10,15 +11,25 @@ Template t;
 
 ["",""] @=> string args[];
 
-t.newFun("hi", "void", args, "  fprintf(stderr,\"ChuckTrip Hi \\n\");  ", "prints --hi-- msg");
-t.newFun("bye", "void", args, "  fprintf(stderr,\"ChuckTrip Bye \\n\");  ", "prints --bye-- msg");
-t.newFun("htFPP", "int", args, "  = ht->getFPP();  ", "prints --htFPP--");
-[ "QString","word"] @=> args;
-t.newFun("printSomeString", "void", [ "QString","word"], "  fprintf(stderr,\"ChuckTrip %s \\n\", 
-  word.toStdString().c_str());  ", "prints --bye-- msg");
-t.newFun("connectTo", "void", [ "QString","server"], "ht = new Hapitrip();
+//t.newFun("hi", "void", args, "  fprintf(stderr,\"ChuckTrip Hi \\n\");  ", "prints --hi-- msg");
+//t.newFun("bye", "void", args, "  fprintf(stderr,\"ChuckTrip Bye \\n\");  ", "prints --bye-- msg");
+//t.newFun("htFPP", "int", args, "  ht->getFPP();  ", "prints --htFPP--");
+//[ "QString","word"] @=> args;
+//t.newFun("printSomeString", "void", args, "  fprintf(stderr,\"ChuckTrip %s \\n\", 
+//  word.toStdString().c_str());  ", "prints --bye-- msg");
+
+["int","udpPort"] @=> args;
+t.newFun("setLocalUDPaudioPort", "void", args, "ht->setLocalUDPaudioPort(udpPort);", "sets local UDP port for incoming stream");
+
+["QString","server"] @=> args;
+t.newFun("connectTo", "void", args, "ht = new Hapitrip();
         ht->connectToServer(server);
         ht->run(); ", "connects to hub server and runs");
+
+["",""] @=> args;
+t.newFun("disconnect", "void", args, "ht->stop();", "disconnects from hub server");
+
+t.newFun("getFPP", "int", args, " m_FPP; ", "returns innternal FPP");
 
 fout <= t.INCLUDES;
 fout <= t.STATIC_DECLARATIONS;
