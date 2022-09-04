@@ -267,10 +267,24 @@ CK_DLL_MFUN(ChuckTrip_getFPP)
 " => string STATIC_IMPLEMENTATIONS; ////////////////////////////////////////////
 
 /////////////////////////////
-fun void newFun (string name, string returnType, string body, string docText) {
-  name => string callWith; // callWith could be set differently
+fun void newFun (string name, string returnType, string args[], string body, string docText) {
+
+  "" => string methodArgType;
+  "" => string methodArgVar;
+  "" => string queryArgType;
+  "" => string staticArgType;
+  args.cap()/2 => int argCnt; // wired for only 1 arg at the moment
+  args[0] => methodArgType; 
+  args[1] => methodArgVar; 
+  if (args[0]=="QString") {
+      "string" => queryArgType;
+      "GET_NEXT_STRING(ARGS)->c_str()" => staticArgType;
+  }
+  else 0 => argCnt;
+ 
+  name => string callWith; // callWith is the eventual chuck call and could be set differently
   "void" => string methodReturnType;
-  "" => string methodReturnCode;
+  "// void function" => string methodReturnCode;
   "" => string methodReturnVar;
   "" => string staticReturnCode;
   if (returnType=="int") {
@@ -281,8 +295,8 @@ fun void newFun (string name, string returnType, string body, string docText) {
   }
   if (returnType=="float") {
     "t_CKFLOAT" => methodReturnType;
-    "float rtnFloat "  => methodReturnVar; // reserved var rtnInt for magic
-    "return rtnFloat;" => methodReturnCode; // reserved var rtnInt for magic
+    "float rtnFloat "  => methodReturnVar; // reserved var rtnFloat for magic
+    "return rtnFloat;" => methodReturnCode; // reserved var rtnFloat for magic
     "RETURN->v_float = " => staticReturnCode; // chuck magic 
   }
 "
@@ -290,7 +304,7 @@ CK_DLL_MFUN(ChuckTrip_"+name+");
 " +=> STATIC_DECLARATIONS;
 
 "
-    "+methodReturnType+" "+name+"() {
+    "+methodReturnType+" "+name+"("+methodArgType+" "+methodArgVar+") {
         "+methodReturnVar+body+"
        "+methodReturnCode+"
     }
@@ -301,11 +315,16 @@ CK_DLL_MFUN(ChuckTrip_"+name+");
     QUERY->doc_func(QUERY, \""+name+": "+docText+"\");
 " +=> QUERY_CLASS;
 
+for (0 => int arg; arg < argCnt; arg++) {  // but wired for only 1 arg at the moment
+"    QUERY->add_arg(QUERY, \""+queryArgType+"\", \"arg\");
+" +=> QUERY_CLASS;
+}
+
 "
 CK_DLL_MFUN(ChuckTrip_"+name+")
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    "+staticReturnCode+"bcdata->"+name+"();
+    "+staticReturnCode+"bcdata->"+name+"("+staticArgType+");
 }
 " +=> STATIC_IMPLEMENTATIONS;
 }

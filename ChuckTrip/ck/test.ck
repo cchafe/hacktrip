@@ -4,15 +4,15 @@
 //chuck --chugin-path:../ --srate:48000 --verbose:5 test.ck
 
 ChuckTrip ct => dac;
-ct.connect("jackloop256.stanford.edu");
-ct.hi();
+"jackloop256.stanford.edu" => string server;
+
+ct.connectTo(server);
 <<<ct.htFPP()>>>;
 while (true) {
 6::second => now;
 ct.disconnect();
 <<<"disconnect">>>;
-ct.bye();
 1::second => now;
-ct.connect("jackloop256.stanford.edu");
+ct.connectTo(server);
 }
 1::hour => now;

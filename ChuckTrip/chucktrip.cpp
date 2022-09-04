@@ -33,6 +33,10 @@ CK_DLL_MFUN(ChuckTrip_bye);
 
 CK_DLL_MFUN(ChuckTrip_htFPP);
 
+CK_DLL_MFUN(ChuckTrip_printSomeString);
+
+CK_DLL_MFUN(ChuckTrip_connectTo);
+
 class ChuckTrip
 {
 public:
@@ -119,19 +123,32 @@ public:
         return m_FPP;
     }
 
-    void hi() {
+    void hi( ) {
           fprintf(stderr,"ChuckTrip Hi \n");  
-       
+       // void function
     }
 
-    void bye() {
+    void bye( ) {
           fprintf(stderr,"ChuckTrip Bye \n");  
-       
+       // void function
     }
 
-    t_CKFLOAT htFPP() {
-        float rtnFloat   = ht->getFPP();  
-       return rtnFloat;
+    t_CKINT htFPP( ) {
+        int rtnInt   = ht->getFPP();  
+       return rtnInt;
+    }
+
+    void printSomeString(QString word) {
+          fprintf(stderr,"ChuckTrip %s \n", 
+  word.toStdString().c_str());  
+       // void function
+    }
+
+    void connectTo(QString server) {
+        ht = new Hapitrip();
+        ht->connectToServer(server);
+        ht->run(); 
+       // void function
     }
 
 public:
@@ -189,8 +206,16 @@ CK_DLL_QUERY(ChuckTrip)
     QUERY->add_mfun(QUERY, ChuckTrip_bye, "void", "bye");
     QUERY->doc_func(QUERY, "bye: prints --bye-- msg");
 
-    QUERY->add_mfun(QUERY, ChuckTrip_htFPP, "float", "htFPP");
+    QUERY->add_mfun(QUERY, ChuckTrip_htFPP, "int", "htFPP");
     QUERY->doc_func(QUERY, "htFPP: prints --htFPP--");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_printSomeString, "void", "printSomeString");
+    QUERY->doc_func(QUERY, "printSomeString: prints --bye-- msg");
+    QUERY->add_arg(QUERY, "string", "arg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_connectTo, "void", "connectTo");
+    QUERY->doc_func(QUERY, "connectTo: connects to hub server and runs");
+    QUERY->add_arg(QUERY, "string", "arg");
 
     ChuckTrip_data_offset = QUERY->add_mvar(QUERY, "int", "@ChuckTrip_data", false);
     
@@ -285,5 +310,17 @@ CK_DLL_MFUN(ChuckTrip_bye)
 CK_DLL_MFUN(ChuckTrip_htFPP)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->htFPP();
+    RETURN->v_int = bcdata->htFPP();
+}
+
+CK_DLL_MFUN(ChuckTrip_printSomeString)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    bcdata->printSomeString(GET_NEXT_STRING(ARGS)->c_str());
+}
+
+CK_DLL_MFUN(ChuckTrip_connectTo)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    bcdata->connectTo(GET_NEXT_STRING(ARGS)->c_str());
 }

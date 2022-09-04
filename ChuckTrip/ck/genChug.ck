@@ -8,9 +8,17 @@ fout.open("../chucktrip.cpp",FileIO.WRITE);
 fout <= "// this file was automatically generated with \n // chuck -s chuck -s template.ck genChug.ck \n";
 Template t;
 
-t.newFun("hi", "void", "  fprintf(stderr,\"ChuckTrip Hi \\n\");  ", "prints --hi-- msg");
-t.newFun("bye", "void", "  fprintf(stderr,\"ChuckTrip Bye \\n\");  ", "prints --bye-- msg");
-t.newFun("htFPP", "float", "  = ht->getFPP();  ", "prints --htFPP--");
+["",""] @=> string args[];
+
+t.newFun("hi", "void", args, "  fprintf(stderr,\"ChuckTrip Hi \\n\");  ", "prints --hi-- msg");
+t.newFun("bye", "void", args, "  fprintf(stderr,\"ChuckTrip Bye \\n\");  ", "prints --bye-- msg");
+t.newFun("htFPP", "int", args, "  = ht->getFPP();  ", "prints --htFPP--");
+[ "QString","word"] @=> args;
+t.newFun("printSomeString", "void", [ "QString","word"], "  fprintf(stderr,\"ChuckTrip %s \\n\", 
+  word.toStdString().c_str());  ", "prints --bye-- msg");
+t.newFun("connectTo", "void", [ "QString","server"], "ht = new Hapitrip();
+        ht->connectToServer(server);
+        ht->run(); ", "connects to hub server and runs");
 
 fout <= t.INCLUDES;
 fout <= t.STATIC_DECLARATIONS;
