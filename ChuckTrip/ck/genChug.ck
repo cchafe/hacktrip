@@ -21,6 +21,17 @@ Template t;
 ["int","udpPort"] @=> args;
 t.newFun("setLocalUDPaudioPort", "void", args, "ht->setLocalUDPaudioPort(udpPort);", "sets local UDP port for incoming stream");
 
+["int","FPP"] @=> args;
+t.newFun("setFPP", "void", args, "if (FPP) ht->setFPP(FPP);
+        m_FPP = ht->getFPP();
+        m_sendBuffer = new float[m_FPP * 2]; // garnered from pitchtrack chugin
+        m_rcvBuffer = new float[m_FPP * 2];
+        for (int i = 0; i < m_FPP * 2; i++) {
+          m_sendBuffer[i] = 0.0;
+          m_rcvBuffer[i] = 0.0;
+        }
+", "sets FPP");
+
 ["QString","server"] @=> args;
 t.newFun("connectTo", "void", args, "ht = new Hapitrip();
         ht->connectToServer(server);

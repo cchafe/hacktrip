@@ -19,6 +19,8 @@ t_CKINT ChuckTrip_data_offset = 0;
 
 CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort);
 
+CK_DLL_MFUN(ChuckTrip_setFPP);
+
 CK_DLL_MFUN(ChuckTrip_connectTo);
 
 CK_DLL_MFUN(ChuckTrip_disconnect);
@@ -32,15 +34,8 @@ public:
     ChuckTrip(float fs)
     {
         m_fs = fs;
-        m_FPP = ht->getFPP();
-        m_sendBuffer = new float[m_FPP * 2]; // garnered from pitchtrack chugin
-        m_rcvBuffer = new float[m_FPP * 2];
-        for (int i = 0; i < m_FPP * 2; i++)
-        {
-            m_sendBuffer[i] = 0.0;
-            m_rcvBuffer[i] = 0.0;
-        }
         m_sampleCount = 0;
+        setFPP(0); // use ht default
 
 }
     ~ChuckTrip ()
@@ -74,6 +69,19 @@ public:
 
     void setLocalUDPaudioPort(int udpPort) {
         ht->setLocalUDPaudioPort(udpPort);
+       // void function
+    }
+
+    void setFPP(int FPP) {
+        if (FPP) ht->setFPP(FPP);
+  m_FPP = ht->getFPP();
+  m_sendBuffer = new float[m_FPP * 2]; // garnered from pitchtrack chugin
+  m_rcvBuffer = new float[m_FPP * 2];
+  for (int i = 0; i < m_FPP * 2; i++) {
+    m_sendBuffer[i] = 0.0;
+    m_rcvBuffer[i] = 0.0;
+  }
+
        // void function
     }
 
@@ -122,6 +130,10 @@ CK_DLL_QUERY(ChuckTrip)
 
     QUERY->add_mfun(QUERY, ChuckTrip_setLocalUDPaudioPort, "void", "setLocalUDPaudioPort");
     QUERY->doc_func(QUERY, "setLocalUDPaudioPort: sets local UDP port for incoming stream");
+    QUERY->add_arg(QUERY, "int", "arg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_setFPP, "void", "setFPP");
+    QUERY->doc_func(QUERY, "setFPP: sets FPP");
     QUERY->add_arg(QUERY, "int", "arg");
 
     QUERY->add_mfun(QUERY, ChuckTrip_connectTo, "void", "connectTo");
@@ -179,6 +191,12 @@ CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     bcdata->setLocalUDPaudioPort(GET_NEXT_INT(ARGS));
+}
+
+CK_DLL_MFUN(ChuckTrip_setFPP)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    bcdata->setFPP(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_MFUN(ChuckTrip_connectTo)

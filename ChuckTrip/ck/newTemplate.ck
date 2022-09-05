@@ -33,15 +33,8 @@ public:
     ChuckTrip(float fs)
     {
         m_fs = fs;
-        m_FPP = ht->getFPP();
-        m_sendBuffer = new float[m_FPP * 2]; // garnered from pitchtrack chugin
-        m_rcvBuffer = new float[m_FPP * 2];
-        for (int i = 0; i < m_FPP * 2; i++)
-        {
-            m_sendBuffer[i] = 0.0;
-            m_rcvBuffer[i] = 0.0;
-        }
         m_sampleCount = 0;
+        setFPP(0); // use ht default
 " => string CLASS_CONSTRUCTOR; ////////////////////////////////////////////
 
 "
