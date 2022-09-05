@@ -35,6 +35,7 @@ public:
         m_fs = fs;
         m_sampleCount = 0;
         setFPP(0); // use ht default
+        setChannels(0); // use ht default
 " => string CLASS_CONSTRUCTOR; ////////////////////////////////////////////
 
 "
@@ -52,15 +53,15 @@ public:
     void tick( SAMPLE * in, SAMPLE * out, int nframes ) // nframes = 1
     {
         // needs work if more than stereo
-        int nChans = 2; // need to add a method to set from Hapitrip::as.channels
+        if (!m_channels || (m_channels>2)) fprintf(stderr,\"ChuckTrip m_channels = %d!! \\n\",m_channels);
         m_sampleCount %= m_FPP;
-        memset(out, 0, sizeof(SAMPLE)*nChans*nframes);
-        for (int i=0; i < nframes; i+=nChans)
+        memset(out, 0, sizeof(SAMPLE)*m_channels*nframes);
+        for (int i=0; i < nframes; i+=m_channels)
         {
-            m_sendBuffer[m_sampleCount*nChans] = in[i];
-            m_sendBuffer[m_sampleCount*nChans+1] = in[i+1];
-            out[i] = m_rcvBuffer[m_sampleCount*nChans];
-            out[i+1] = m_rcvBuffer[m_sampleCount*nChans+1];
+            m_sendBuffer[m_sampleCount*m_channels] = in[i];
+            m_sendBuffer[m_sampleCount*m_channels+1] = in[i+1];
+            out[i] = m_rcvBuffer[m_sampleCount*m_channels];
+            out[i+1] = m_rcvBuffer[m_sampleCount*m_channels+1];
         }
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {
@@ -77,7 +78,20 @@ public:
 
 "
 private:
+    void setBuffers() {
+        m_sendBuffer = new float[m_FPP * m_channels]; // garnered from pitchtrack chugin
+        m_rcvBuffer = new float[m_FPP * m_channels];
+        for (int i = 0; i < m_FPP * m_channels; i++) {
+          m_sendBuffer[i] = 0.0;
+          m_rcvBuffer[i] = 0.0;
+        }
+    };
+" => string CLASS_PRIVATE_METHODS; ////////////////////////////////////////////
+
+"
+private:
     t_CKFLOAT m_fs;
+    t_CKINT m_channels;
     t_CKINT m_FPP;
     Hapitrip *ht;
     t_CKINT m_sampleCount;

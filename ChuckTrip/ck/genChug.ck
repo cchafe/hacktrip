@@ -18,19 +18,20 @@ Template t;
 //t.newFun("printSomeString", "void", args, "  fprintf(stderr,\"ChuckTrip %s \\n\", 
 //  word.toStdString().c_str());  ", "prints --bye-- msg");
 
-["int","udpPort"] @=> args;
-t.newFun("setLocalUDPaudioPort", "void", args, "ht->setLocalUDPaudioPort(udpPort);", "sets local UDP port for incoming stream");
+["int","nChans"] @=> args;
+t.newFun("setChannels", "void", args, "if (nChans) ht->setChannels(nChans);
+        m_channels = ht->getChannels();
+        setBuffers();
+", "sets number of channels");
 
 ["int","FPP"] @=> args;
 t.newFun("setFPP", "void", args, "if (FPP) ht->setFPP(FPP);
         m_FPP = ht->getFPP();
-        m_sendBuffer = new float[m_FPP * 2]; // garnered from pitchtrack chugin
-        m_rcvBuffer = new float[m_FPP * 2];
-        for (int i = 0; i < m_FPP * 2; i++) {
-          m_sendBuffer[i] = 0.0;
-          m_rcvBuffer[i] = 0.0;
-        }
+        setBuffers();
 ", "sets FPP");
+
+["int","udpPort"] @=> args;
+t.newFun("setLocalUDPaudioPort", "void", args, "ht->setLocalUDPaudioPort(udpPort);", "sets local UDP port for incoming stream");
 
 ["QString","server"] @=> args;
 t.newFun("connectTo", "void", args, "ht = new Hapitrip();
@@ -38,9 +39,13 @@ t.newFun("connectTo", "void", args, "ht = new Hapitrip();
         ht->run(); ", "connects to hub server and runs");
 
 ["",""] @=> args;
-t.newFun("disconnect", "void", args, "ht->stop();", "disconnects from hub server");
+t.newFun("getChannels", "int", args, " m_channels; ", "returns internal number of channels");
 
-t.newFun("getFPP", "int", args, " m_FPP; ", "returns innternal FPP");
+t.newFun("getFPP", "int", args, " m_FPP; ", "returns internal FPP");
+
+t.newFun("getLocalUDPaudioPort", "int", args, " ht->getLocalUDPaudioPort(); ", "returns localUDPaudioPort");
+
+t.newFun("disconnect", "void", args, "ht->stop();", "disconnects from hub server");
 
 fout <= t.INCLUDES;
 fout <= t.STATIC_DECLARATIONS;
@@ -49,6 +54,7 @@ fout <= t.CLASS_CONSTRUCTOR + "\n}";
 fout <= t.CLASS_DESTRUCTOR;
 fout <= t.CLASS_PUBLIC_METHODS;
 fout <= t.CLASS_PUBLIC_MEMBERS;
+fout <= t.CLASS_PRIVATE_METHODS;
 fout <= t.CLASS_PRIVATE_MEMBERS;
 fout <= t.FINISH_CLASS;
 fout <= t.QUERY_CLASS;
