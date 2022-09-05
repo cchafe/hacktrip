@@ -1,5 +1,5 @@
 // this file was automatically generated with 
- // chuck -s chuck -s template.ck genChug.ck 
+ // chuck -s newTemplate.ck genChug.ck 
 
 #include "chuck_dl.h"
 #include "chuck_def.h"
@@ -62,10 +62,12 @@ public:
         memset(out, 0, sizeof(SAMPLE)*m_channels*nframes);
         for (int i=0; i < nframes; i+=m_channels)
         {
-            m_sendBuffer[m_sampleCount*m_channels] = in[i];
-            m_sendBuffer[m_sampleCount*m_channels+1] = in[i+1];
-            out[i] = m_rcvBuffer[m_sampleCount*m_channels];
-            out[i+1] = m_rcvBuffer[m_sampleCount*m_channels+1];
+          for (int j=0; j < nframes; j++) {
+              m_sendBuffer[m_sampleCount*m_channels] = in[i+j];
+//              m_sendBuffer[m_sampleCount*m_channels+1] = in[i+1];
+              out[i+j] = m_rcvBuffer[m_sampleCount*m_channels+j];
+//              out[i+1] = m_rcvBuffer[m_sampleCount*m_channels+1];
+          }
         }
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {

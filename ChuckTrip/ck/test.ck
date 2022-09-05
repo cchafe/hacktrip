@@ -4,12 +4,14 @@
 //chuck --chugin-path:../ --srate:48000 --verbose:5 test.ck
 
 ChuckTrip ct => dac;
-[128, 256, 64] @=> int fpp[];
+[128, 256, 64, 32] @=> int fpp[];
 [1, 2, 1] @=> int nChans[];
 0 => int find;
 0 => int cind;
+0 => int pind;
 string server;
-ct.setLocalUDPaudioPort(4464);
+pind++;
+ct.setLocalUDPaudioPort(4464+pind);
 find++;
 fpp.cap()%=>find;
 ct.setFPP(fpp[find]);
@@ -24,6 +26,8 @@ while (true) {
 ct.disconnect();
 <<<"disconnect">>>;
 1::second => now;
+pind++;
+ct.setLocalUDPaudioPort(4464+pind);
 find++;
 fpp.cap()%=>find;
 ct.setFPP(fpp[find]);

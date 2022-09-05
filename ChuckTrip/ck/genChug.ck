@@ -6,7 +6,7 @@
 FileIO fout;
 fout.open("../chucktrip.cpp",FileIO.WRITE);
 
-fout <= "// this file was automatically generated with \n // chuck -s chuck -s template.ck genChug.ck \n";
+fout <= "// this file was automatically generated with \n // chuck -s newTemplate.ck genChug.ck \n";
 Template t;
 
 ["",""] @=> string args[];
