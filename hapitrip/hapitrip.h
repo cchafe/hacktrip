@@ -105,7 +105,7 @@ public:
 #ifndef NO_AUDIO
 class Audio {
 public:
-    void start();
+    bool start();
     void stop();
     int audioCallback(void *outputBuffer, void *inputBuffer,
                       unsigned int nBufferFrames, double streamTime,

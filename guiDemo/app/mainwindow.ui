@@ -89,6 +89,11 @@
      </property>
      <item>
       <property name="text">
+       <string>256</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>128</string>
       </property>
      </item>
@@ -100,11 +105,6 @@
      <item>
       <property name="text">
        <string>16</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>256</string>
       </property>
      </item>
     </widget>
@@ -145,17 +145,22 @@
      </property>
      <item>
       <property name="text">
+       <string>cmn9.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>jackloop256.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>35.178.207.30</string>
       </property>
      </item>
      <item>
       <property name="text">
        <string>jackloop128.stanford.edu</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>cmn9.stanford.edu</string>
       </property>
      </item>
      <item>
@@ -321,6 +326,9 @@
      </property>
      <property name="text">
       <string>PLC</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </widget>

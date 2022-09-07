@@ -184,8 +184,8 @@ void Regulator::shimFPP(int8_t* buf, int len, int seq_num)
                 if (mMsecTolerance != -500.0) {
                     // use it to set headroom
                     mAutoHeadroom = -mMsecTolerance;
-                    qDebug() << "PLC is in auto mode and has been set with"
-                             << mAutoHeadroom << "ms headroom";
+                    std::cout << "PLC is in auto mode and has been set with "
+                             << mAutoHeadroom << " ms headroom\n";
                     if (mAutoHeadroom > 50.0)
                         qDebug() << "That's a very large value and should be less than, "
                                     "for example, 50ms";

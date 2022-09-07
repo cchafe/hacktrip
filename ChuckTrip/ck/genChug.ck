@@ -30,6 +30,11 @@ t.newFun("setFPP", "void", args, "if (FPP) ht->setFPP(FPP);
         setBuffers();
 ", "sets FPP");
 
+["int","use"] @=> args;
+t.newFun("setUsePLC", "void", args, "if (use) ht->setUsePLC(use);
+        m_PLC = ht->getUsePLC();
+", "sets PLC");
+
 ["int","udpPort"] @=> args;
 t.newFun("setLocalUDPaudioPort", "void", args, "ht->setLocalUDPaudioPort(udpPort);", "sets local UDP port for incoming stream");
 
@@ -42,6 +47,8 @@ t.newFun("connectTo", "void", args, "ht = new Hapitrip();
 t.newFun("getChannels", "int", args, " m_channels; ", "returns internal number of channels");
 
 t.newFun("getFPP", "int", args, " m_FPP; ", "returns internal FPP");
+
+t.newFun("getUsePLC", "int", args, " m_PLC; ", "returns internal PLC state");
 
 t.newFun("getLocalUDPaudioPort", "int", args, " ht->getLocalUDPaudioPort(); ", "returns localUDPaudioPort");
 

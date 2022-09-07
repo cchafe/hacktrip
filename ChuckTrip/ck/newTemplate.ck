@@ -35,7 +35,7 @@ public:
         m_fs = fs;
         m_sampleCount = 0;
         setFPP(0); // use ht default
-        setChannels(0); // use ht default
+        setUsePLC(0); // use ht default
 " => string CLASS_CONSTRUCTOR; ////////////////////////////////////////////
 
 "
@@ -58,7 +58,7 @@ public:
         memset(out, 0, sizeof(SAMPLE)*m_channels*nframes);
         for (int i=0; i < nframes; i+=m_channels)
         {
-          for (int j=0; j < nframes; j++) {
+          for (int j=0; j < m_channels; j++) {
               m_sendBuffer[m_sampleCount*m_channels] = in[i+j];
               out[i+j] = m_rcvBuffer[m_sampleCount*m_channels+j];
           }
@@ -93,6 +93,7 @@ private:
     t_CKFLOAT m_fs;
     t_CKINT m_channels;
     t_CKINT m_FPP;
+    t_CKINT m_PLC;
     Hapitrip *ht;
     t_CKINT m_sampleCount;
     float *m_sendBuffer;

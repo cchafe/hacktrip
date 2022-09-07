@@ -31,7 +31,9 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     mUdp->start(); // bidirectional flows
 #endif
 #ifndef NO_AUDIO
-    mAudio.start();
+    if (mAudio.start()) {
+        mUdp->stop();
+    }
 #endif
 }
 
@@ -147,7 +149,7 @@ void UDP::start() {
     reg = new Regulator(Hapitrip::as.channels,
                         Hapitrip::as.bytesPerSample,
                         Hapitrip::as.FPP,
-                        35, // qlen needs to be param
+                        -3, // qlen needs to be param
                         Hapitrip::as.scale, Hapitrip::as.invScale,
                         Hapitrip::as.verbose,
                         Hapitrip::as.audioDataLen);
@@ -336,7 +338,7 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim
 #endif
 
 #ifndef NO_AUDIO
-void Audio::start() {
+bool Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds -- (unused) from RtAudio examples/duplex
     m_streamTimePrintTime = 1.0;      // seconds -- (unused) from RtAudio examples/duplex
 
@@ -381,8 +383,8 @@ void Audio::start() {
               << "\tfor input and output\n";
     std::cout << "\tIf another is needed, either change your settings\n";
     std::cout << "\tor the choice in the code\n";
-    unsigned int bufferFrames = Hapitrip::as.FPP;
-#ifndef AUDIO_ONLY   
+    unsigned int bufferFrames = 0;
+#ifndef AUDIO_ONLY
     if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::as.sampleRate,
                            &bufferFrames, &Audio::wrapperProcessCallback,
                            (void *)mUdp, &options)) // specify UDP class callback
@@ -395,6 +397,7 @@ void Audio::start() {
         std::cout << "\nCouldn't open audio device streams!\n";
 
 #endif
+    bool fail = false;
     if (m_adac->isStreamOpen() == false) {
         std::cout << "\nCouldn't open audio device streams!\n";
         exit(1);
@@ -404,9 +407,18 @@ void Audio::start() {
         std::cout << "\nStream latency = " << m_adac->getStreamLatency()
                   << " frames" << std::endl;
     }
-    if (m_adac->startStream())
+    if (Hapitrip::as.FPP != (int)bufferFrames)
+        std::cout << "selected FPP conflicts with audio backend bufferFrames "
+                  << Hapitrip::as.FPP << " != "
+                  << bufferFrames
+                  << "\n-- make them the same then connect & run again\n";
+    else if (m_adac->startStream()) {
         std::cout << "\nCouldn't start streams!\n";
-    std::cout << "\nAudio stream started" << std::endl; // phew...
+        fail = true;
+    }
+    else
+        std::cout << "\nAudio stream started" << std::endl; // phew...
+    return fail;
 }
 
 void Audio::stop() { // graceful audio shutdown

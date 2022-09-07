@@ -21,6 +21,8 @@ CK_DLL_MFUN(ChuckTrip_setChannels);
 
 CK_DLL_MFUN(ChuckTrip_setFPP);
 
+CK_DLL_MFUN(ChuckTrip_setUsePLC);
+
 CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort);
 
 CK_DLL_MFUN(ChuckTrip_connectTo);
@@ -28,6 +30,8 @@ CK_DLL_MFUN(ChuckTrip_connectTo);
 CK_DLL_MFUN(ChuckTrip_getChannels);
 
 CK_DLL_MFUN(ChuckTrip_getFPP);
+
+CK_DLL_MFUN(ChuckTrip_getUsePLC);
 
 CK_DLL_MFUN(ChuckTrip_getLocalUDPaudioPort);
 
@@ -42,7 +46,7 @@ public:
         m_fs = fs;
         m_sampleCount = 0;
         setFPP(0); // use ht default
-        setChannels(0); // use ht default
+        setUsePLC(0); // use ht default
 
 }
     ~ChuckTrip ()
@@ -62,11 +66,9 @@ public:
         memset(out, 0, sizeof(SAMPLE)*m_channels*nframes);
         for (int i=0; i < nframes; i+=m_channels)
         {
-          for (int j=0; j < nframes; j++) {
+          for (int j=0; j < m_channels; j++) {
               m_sendBuffer[m_sampleCount*m_channels] = in[i+j];
-//              m_sendBuffer[m_sampleCount*m_channels+1] = in[i+1];
               out[i+j] = m_rcvBuffer[m_sampleCount*m_channels+j];
-//              out[i+1] = m_rcvBuffer[m_sampleCount*m_channels+1];
           }
         }
         m_sampleCount++;
@@ -92,6 +94,13 @@ public:
        // void function
     }
 
+    void setUsePLC(int use) {
+        if (use) ht->setUsePLC(use);
+        m_PLC = ht->getUsePLC();
+
+       // void function
+    }
+
     void setLocalUDPaudioPort(int udpPort) {
         ht->setLocalUDPaudioPort(udpPort);
        // void function
@@ -111,6 +120,11 @@ public:
 
     t_CKINT getFPP( ) {
         int rtnInt =  m_FPP; 
+       return rtnInt;
+    }
+
+    t_CKINT getUsePLC( ) {
+        int rtnInt =  m_PLC; 
        return rtnInt;
     }
 
@@ -141,6 +155,7 @@ private:
     t_CKFLOAT m_fs;
     t_CKINT m_channels;
     t_CKINT m_FPP;
+    t_CKINT m_PLC;
     Hapitrip *ht;
     t_CKINT m_sampleCount;
     float *m_sendBuffer;
@@ -169,6 +184,10 @@ CK_DLL_QUERY(ChuckTrip)
     QUERY->doc_func(QUERY, "setFPP: sets FPP");
     QUERY->add_arg(QUERY, "int", "arg");
 
+    QUERY->add_mfun(QUERY, ChuckTrip_setUsePLC, "void", "setUsePLC");
+    QUERY->doc_func(QUERY, "setUsePLC: sets PLC");
+    QUERY->add_arg(QUERY, "int", "arg");
+
     QUERY->add_mfun(QUERY, ChuckTrip_setLocalUDPaudioPort, "void", "setLocalUDPaudioPort");
     QUERY->doc_func(QUERY, "setLocalUDPaudioPort: sets local UDP port for incoming stream");
     QUERY->add_arg(QUERY, "int", "arg");
@@ -182,6 +201,9 @@ CK_DLL_QUERY(ChuckTrip)
 
     QUERY->add_mfun(QUERY, ChuckTrip_getFPP, "int", "getFPP");
     QUERY->doc_func(QUERY, "getFPP: returns internal FPP");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_getUsePLC, "int", "getUsePLC");
+    QUERY->doc_func(QUERY, "getUsePLC: returns internal PLC state");
 
     QUERY->add_mfun(QUERY, ChuckTrip_getLocalUDPaudioPort, "int", "getLocalUDPaudioPort");
     QUERY->doc_func(QUERY, "getLocalUDPaudioPort: returns localUDPaudioPort");
@@ -242,6 +264,12 @@ CK_DLL_MFUN(ChuckTrip_setFPP)
     bcdata->setFPP(GET_NEXT_INT(ARGS));
 }
 
+CK_DLL_MFUN(ChuckTrip_setUsePLC)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    bcdata->setUsePLC(GET_NEXT_INT(ARGS));
+}
+
 CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
@@ -264,6 +292,12 @@ CK_DLL_MFUN(ChuckTrip_getFPP)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     RETURN->v_int = bcdata->getFPP();
+}
+
+CK_DLL_MFUN(ChuckTrip_getUsePLC)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_int = bcdata->getUsePLC();
 }
 
 CK_DLL_MFUN(ChuckTrip_getLocalUDPaudioPort)
