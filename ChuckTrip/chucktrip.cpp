@@ -1,6 +1,5 @@
-/*----------------------------------------------------------------------------
- ChucK to ChuckTrip
- -----------------------------------------------------------------------------*/
+// this file was automatically generated with 
+ // chuck -s newTemplate.ck genChug.ck 
 
 #include "chuck_dl.h"
 #include "chuck_def.h"
@@ -14,20 +13,29 @@
 
 CK_DLL_CTOR(ChuckTrip_ctor);
 CK_DLL_DTOR(ChuckTrip_dtor);
-
-CK_DLL_MFUN(ChuckTrip_setFreq);
-CK_DLL_MFUN(ChuckTrip_getFreq);
-
-// CK_DLL_TICK(ChuckTrip_tick);
 CK_DLL_TICKF(ChuckTrip_tick);
-CK_DLL_MFUN(ChuckTrip_connect);
-CK_DLL_MFUN(ChuckTrip_disconnect);
+
+t_CKINT ChuckTrip_data_offset = 0;
+
+CK_DLL_MFUN(ChuckTrip_setChannels);
+
+CK_DLL_MFUN(ChuckTrip_setFPP);
+
+CK_DLL_MFUN(ChuckTrip_setUsePLC);
 
 CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort);
 
+CK_DLL_MFUN(ChuckTrip_connectTo);
+
+CK_DLL_MFUN(ChuckTrip_getChannels);
+
 CK_DLL_MFUN(ChuckTrip_getFPP);
 
-t_CKINT ChuckTrip_data_offset = 0;
+CK_DLL_MFUN(ChuckTrip_getUsePLC);
+
+CK_DLL_MFUN(ChuckTrip_getLocalUDPaudioPort);
+
+CK_DLL_MFUN(ChuckTrip_disconnect);
 
 class ChuckTrip
 {
@@ -36,20 +44,11 @@ public:
     ChuckTrip(float fs)
     {
         m_fs = fs;
-        setFreq(440); // internal magic sine
-        m_x = 1;
-        m_y = 0;
-        m_FPP = ht->getFPP();
-        m_sendBuffer = new float[m_FPP * 2]; // garnered from pitchtrack chugin
-        m_rcvBuffer = new float[m_FPP * 2];
-        for (int i = 0; i < m_FPP * 2; i++)
-        {
-            m_sendBuffer[i] = 0.0;
-            m_rcvBuffer[i] = 0.0;
-        }
         m_sampleCount = 0;
-    }
+        setFPP(0); // use ht default
+        setUsePLC(0); // use ht default
 
+}
     ~ChuckTrip ()
     {
         fprintf(stderr,"ChuckTrip dtor reached!! \n");
@@ -58,92 +57,110 @@ public:
         free(m_rcvBuffer);
     }
 
-    t_CKFLOAT connect(char *filename)
-    {
-//        fprintf(stderr,"%s",filename);
-        ht = new Hapitrip();
-        ht->connectToServer(filename);
-        ht->run();
-        return(0.0);
-    }
 
-    t_CKFLOAT disconnect()
+    void tick( SAMPLE * in, SAMPLE * out, int nframes ) // nframes = 1
     {
-        ht->stop();
-        return(0.0);
-    }
-
-    t_CKFLOAT setLocalUDPaudioPort(int port)
-    {
-        ht->setLocalUDPaudioPort(port);
-        return(0.0);
-    }
-
-/*
-mono tick sample version
-    SAMPLE tick(SAMPLE in)
-    {
+        // needs work if more than stereo
+        if (!m_channels || (m_channels>2)) fprintf(stderr,"ChuckTrip m_channels = %d!! \n",m_channels);
         m_sampleCount %= m_FPP;
-        m_sendBuffer[m_sampleCount] = in;
-        t_CKFLOAT out = m_rcvBuffer[m_sampleCount];
-        m_x = m_x + m_epsilon*m_y;
-        m_y = -m_epsilon*m_x + m_y;
-        //        m_sendBuffer[m_sampleCount] = m_y; // internal magic sine
+        memset(out, 0, sizeof(SAMPLE)*m_channels*nframes);
+        for (int i=0; i < nframes; i+=m_channels)
+        {
+          for (int j=0; j < m_channels; j++) {
+              m_sendBuffer[m_sampleCount*m_channels] = in[i+j];
+              out[i+j] = m_rcvBuffer[m_sampleCount*m_channels+j];
+          }
+        }
         m_sampleCount++;
         if (m_sampleCount==m_FPP) {
             ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
         }
-        return out;
-    }
-*/
-
-    void tick( SAMPLE * in, SAMPLE * out, int nframes ) // nframes = 1
-    {
-    // needs work if more than stereo
-      int nChans = 2; // need to add a method to set from Hapitrip::as.channels
-        m_x = m_x + m_epsilon*m_y;
-        m_y = -m_epsilon*m_x + m_y;
-        m_sampleCount %= m_FPP;
-      memset(out, 0, sizeof(SAMPLE)*nChans*nframes);
-      for (int i=0; i < nframes; i+=nChans)
-	{
-	  m_sendBuffer[m_sampleCount*nChans] = in[i];
-	  m_sendBuffer[m_sampleCount*nChans+1] = in[i+1];
-	  out[i] = m_rcvBuffer[m_sampleCount*nChans];
-	  out[i+1] = m_rcvBuffer[m_sampleCount*nChans+1];
-	}
-        m_sampleCount++;
-        if (m_sampleCount==m_FPP) {
-           ht->xfrBufs(m_sendBuffer, m_rcvBuffer);
-        }
     }
     
-    t_CKFLOAT setFreq(t_CKFLOAT f)
-    {
-        m_freq = f;
-        m_epsilon = 2.0*sin(2.0*ONE_PI*(m_freq/m_fs)/2.0);
-        return m_freq;
+
+    void setChannels(int nChans) {
+        if (nChans) ht->setChannels(nChans);
+        m_channels = ht->getChannels();
+        setBuffers();
+
+       // void function
     }
 
-    t_CKFLOAT getFreq() {
-        return m_freq;
+    void setFPP(int FPP) {
+        if (FPP) ht->setFPP(FPP);
+        m_FPP = ht->getFPP();
+        setBuffers();
+
+       // void function
     }
 
-    t_CKINT getFPP() {
-        return m_FPP;
+    void setUsePLC(int use) {
+        if (use) ht->setUsePLC(use);
+        m_PLC = ht->getUsePLC();
+
+       // void function
     }
 
+    void setLocalUDPaudioPort(int udpPort) {
+        ht->setLocalUDPaudioPort(udpPort);
+       // void function
+    }
+
+    void connectTo(QString server) {
+        ht = new Hapitrip();
+        ht->connectToServer(server);
+        ht->run(); 
+       // void function
+    }
+
+    t_CKINT getChannels( ) {
+        int rtnInt =  m_channels; 
+       return rtnInt;
+    }
+
+    t_CKINT getFPP( ) {
+        int rtnInt =  m_FPP; 
+       return rtnInt;
+    }
+
+    t_CKINT getUsePLC( ) {
+        int rtnInt =  m_PLC; 
+       return rtnInt;
+    }
+
+    t_CKINT getLocalUDPaudioPort( ) {
+        int rtnInt =  ht->getLocalUDPaudioPort(); 
+       return rtnInt;
+    }
+
+    void disconnect( ) {
+        ht->stop();
+       // void function
+    }
+
+public:
     char * m_server;
+
 private:
-    SAMPLE m_x, m_y;
+    void setBuffers() {
+        m_sendBuffer = new float[m_FPP * m_channels]; // garnered from pitchtrack chugin
+        m_rcvBuffer = new float[m_FPP * m_channels];
+        for (int i = 0; i < m_FPP * m_channels; i++) {
+          m_sendBuffer[i] = 0.0;
+          m_rcvBuffer[i] = 0.0;
+        }
+    };
+
+private:
     t_CKFLOAT m_fs;
-    t_CKFLOAT m_freq;
-    t_CKFLOAT m_epsilon;
+    t_CKINT m_channels;
     t_CKINT m_FPP;
+    t_CKINT m_PLC;
     Hapitrip *ht;
     t_CKINT m_sampleCount;
     float *m_sendBuffer;
     float *m_rcvBuffer;
+
 };
 
 CK_DLL_QUERY(ChuckTrip)
@@ -151,35 +168,48 @@ CK_DLL_QUERY(ChuckTrip)
     QUERY->setname(QUERY, "ChuckTrip");
     
     QUERY->begin_class(QUERY, "ChuckTrip", "UGen");
-    QUERY->doc_class(QUERY, "Fast, recursive sine wave generator using the so-called &quot;magic circle&quot; algorithm (see <a href=\"https://ccrma.stanford.edu/~jos/pasp/Digital_Sinusoid_Generators.html\">https://ccrma.stanford.edu/~jos/pasp/Digital_Sinusoid_Generators.html</a>). "
-                            "Can be 30-40% faster than regular SinOsc. "
-                            "Frequency modulation will negate this performance benefit; most useful when pure sine tones are desired or for additive synthesis. ");
+    QUERY->doc_class(QUERY, "Fast, recursive sine wave generator using the so-called &quot;magic circle&quot; algorithm ");
     
     QUERY->add_ctor(QUERY, ChuckTrip_ctor);
     QUERY->add_dtor(QUERY, ChuckTrip_dtor);
     
     // QUERY->add_ugen_func(QUERY, ChuckTrip_tick, NULL, 1, 1);
     QUERY->add_ugen_funcf(QUERY, ChuckTrip_tick, NULL, 2, 2);
-        
-    QUERY->add_mfun(QUERY, ChuckTrip_setFreq, "float", "freq");
-    QUERY->add_arg(QUERY, "float", "arg");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
 
-    QUERY->add_mfun(QUERY, ChuckTrip_getFreq, "float", "freq");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
+    QUERY->add_mfun(QUERY, ChuckTrip_setChannels, "void", "setChannels");
+    QUERY->doc_func(QUERY, "setChannels: sets number of channels");
+    QUERY->add_arg(QUERY, "int", "arg");
 
-    QUERY->add_mfun(QUERY, ChuckTrip_connect, "void", "connect");
-    QUERY->add_arg(QUERY, "string", "name" );
-    QUERY->doc_func(QUERY, "Server name. ");
+    QUERY->add_mfun(QUERY, ChuckTrip_setFPP, "void", "setFPP");
+    QUERY->doc_func(QUERY, "setFPP: sets FPP");
+    QUERY->add_arg(QUERY, "int", "arg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_setUsePLC, "void", "setUsePLC");
+    QUERY->doc_func(QUERY, "setUsePLC: sets PLC");
+    QUERY->add_arg(QUERY, "int", "arg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_setLocalUDPaudioPort, "void", "setLocalUDPaudioPort");
+    QUERY->doc_func(QUERY, "setLocalUDPaudioPort: sets local UDP port for incoming stream");
+    QUERY->add_arg(QUERY, "int", "arg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_connectTo, "void", "connectTo");
+    QUERY->doc_func(QUERY, "connectTo: connects to hub server and runs");
+    QUERY->add_arg(QUERY, "string", "arg");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_getChannels, "int", "getChannels");
+    QUERY->doc_func(QUERY, "getChannels: returns internal number of channels");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_getFPP, "int", "getFPP");
+    QUERY->doc_func(QUERY, "getFPP: returns internal FPP");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_getUsePLC, "int", "getUsePLC");
+    QUERY->doc_func(QUERY, "getUsePLC: returns internal PLC state");
+
+    QUERY->add_mfun(QUERY, ChuckTrip_getLocalUDPaudioPort, "int", "getLocalUDPaudioPort");
+    QUERY->doc_func(QUERY, "getLocalUDPaudioPort: returns localUDPaudioPort");
 
     QUERY->add_mfun(QUERY, ChuckTrip_disconnect, "void", "disconnect");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_setLocalUDPaudioPort, "int", "localUDPAudioPort");
-    QUERY->add_arg(QUERY, "int", "arg");
-    QUERY->doc_func(QUERY, "LocalUDPaudioPort. ");
-
-    QUERY->add_mfun(QUERY, ChuckTrip_getFPP, "int", "fpp");
-    QUERY->doc_func(QUERY, "Oscillator frequency [Hz]. ");
+    QUERY->doc_func(QUERY, "disconnect: disconnects from hub server");
 
     ChuckTrip_data_offset = QUERY->add_mvar(QUERY, "int", "@ChuckTrip_data", false);
     
@@ -187,7 +217,6 @@ CK_DLL_QUERY(ChuckTrip)
 
     return TRUE;
 }
-
 
 CK_DLL_CTOR(ChuckTrip_ctor)
 {
@@ -200,7 +229,7 @@ CK_DLL_CTOR(ChuckTrip_ctor)
 
 CK_DLL_DTOR(ChuckTrip_dtor)
 {
-    std::cout << "ChuckTrip: !!" << std::endl;
+    std::cout << "ChuckTrip: destructor !!" << std::endl;
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     if(bcdata)
     {
@@ -210,22 +239,12 @@ CK_DLL_DTOR(ChuckTrip_dtor)
     }
 }
 
-/*
-CK_DLL_TICK(ChuckTrip_tick)
-{
-    ChuckTrip * c = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    
-    if(c) *out = c->tick(in);
-
-    return TRUE;
-}
-*/
 // implementation for tick function
 CK_DLL_TICKF(ChuckTrip_tick)
 {
     // get our c++ class pointer
     ChuckTrip * c = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
- 
+
     // invoke our tick function; store in the magical out variable
     if(c) c->tick(in,out, nframes);
 
@@ -233,41 +252,62 @@ CK_DLL_TICKF(ChuckTrip_tick)
     return TRUE;
 }
 
-CK_DLL_MFUN(ChuckTrip_setFreq)
+CK_DLL_MFUN(ChuckTrip_setChannels)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    // TODO: sanity check
-    RETURN->v_float = bcdata->setFreq(GET_NEXT_FLOAT(ARGS));
+    bcdata->setChannels(GET_NEXT_INT(ARGS));
 }
 
-CK_DLL_MFUN(ChuckTrip_getFreq)
+CK_DLL_MFUN(ChuckTrip_setFPP)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->getFreq();
+    bcdata->setFPP(GET_NEXT_INT(ARGS));
 }
 
-CK_DLL_MFUN(ChuckTrip_connect)
+CK_DLL_MFUN(ChuckTrip_setUsePLC)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    bcdata->m_server = (char *)GET_NEXT_STRING(ARGS)->c_str();
-    RETURN->v_float = bcdata->connect(bcdata->m_server);
-    //    RETURN->v_float = bcdata->connect((char *)GET_NEXT_STRING(ARGS)->c_str());
-}
-
-CK_DLL_MFUN(ChuckTrip_disconnect)
-{
-    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->disconnect();
+    bcdata->setUsePLC(GET_NEXT_INT(ARGS));
 }
 
 CK_DLL_MFUN(ChuckTrip_setLocalUDPaudioPort)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
-    RETURN->v_float = bcdata->setLocalUDPaudioPort(GET_NEXT_INT(ARGS));
+    bcdata->setLocalUDPaudioPort(GET_NEXT_INT(ARGS));
+}
+
+CK_DLL_MFUN(ChuckTrip_connectTo)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    bcdata->connectTo(GET_NEXT_STRING(ARGS)->c_str());
+}
+
+CK_DLL_MFUN(ChuckTrip_getChannels)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_int = bcdata->getChannels();
 }
 
 CK_DLL_MFUN(ChuckTrip_getFPP)
 {
     ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
     RETURN->v_int = bcdata->getFPP();
+}
+
+CK_DLL_MFUN(ChuckTrip_getUsePLC)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_int = bcdata->getUsePLC();
+}
+
+CK_DLL_MFUN(ChuckTrip_getLocalUDPaudioPort)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    RETURN->v_int = bcdata->getLocalUDPaudioPort();
+}
+
+CK_DLL_MFUN(ChuckTrip_disconnect)
+{
+    ChuckTrip * bcdata = (ChuckTrip *) OBJ_MEMBER_INT(SELF, ChuckTrip_data_offset);
+    bcdata->disconnect();
 }

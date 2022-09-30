@@ -3,12 +3,6 @@
 #include <ios>
 #include <iomanip>
 #include <sstream>
-#include "hapitrip.h"
-// wasThisWayInJackTrip  #include "JitterBuffer.h"
-// wasThisWayInJackTrip     #include "jacktrip_globals.h"
-// wasThisWayInJackTrip  using std::std::cout;
-// wasThisWayInJackTrip  using std::std::endl;
-// wasThisWayInJackTrip  using std::std::setw;
 
 // constants...
 constexpr int HIST          = 4;    // for mono at FPP 16-128, see below for > mono, > 128
@@ -24,13 +18,19 @@ constexpr double AutoInitValFactor =
 // tweak
 constexpr int WindowDivisor = 8;     // for faster auto tracking
 constexpr int MaxFPP        = 1024;  // tested up to this FPP
+typedef signed short MY_TYPE; // audio interface data is 16bit ints (using MY_TYPE from rtaudio)
+
 //*******************************************************************************
-Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen)
+Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen,
+                     double scale, double invScale, bool verbose, double audioDataLen)
     : mNumChannels(rcvChannels)
     , mAudioBitRes(bit_res)
     , mFPP(FPP)
     , mMsecTolerance((double)qLen)  // handle non-auto mode, expects positive qLen
-    , mAuto(false)
+    , mAudioDataLen(audioDataLen)
+    , mScale (scale)
+    , mInvScale (invScale)
+    , mVerbose(verbose)
 {
     // catch settings that are compute bound using long HIST
     // hub client rcvChannels is set from client's settings parameters
@@ -40,6 +40,7 @@ Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen)
     //                  << " larger than max channels = " << MaxChans << "\n";
     //        exit(1);
     //    }
+    mAuto = false;
     if (mFPP > MaxFPP) {
         std::cerr << "*** Regulator.cpp: local FPP = " << mFPP
                   << " larger than max FPP = " << MaxFPP << "\n";
@@ -57,11 +58,11 @@ Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen)
     if (((mNumChannels > 1) && (mFPP > 64)) || (mFPP > 128))
         mHist = 3;  // min packets for prediction, needs at least 3
 
-    if (Hapitrip::as.verbose)
+    if (mVerbose)
         std::cout << "mHist = " << mHist << " at " << mFPP << "\n";
-    // wasThisWayInJackTrip      Hapitrip::as.audioDataLen     = mFPP * mNumChannels * Hapitrip::as.bytesPerSample;
-    mXfrBuffer = new int8_t[Hapitrip::as.audioDataLen];
-    memset(mXfrBuffer, 0, Hapitrip::as.audioDataLen);
+    // wasThisWayInJackTrip      mAudioDataLen     = mFPP * mNumChannels * mAudioBitRes;
+    mXfrBuffer = new int8_t[mAudioDataLen];
+    memset(mXfrBuffer, 0, mAudioDataLen);
     mPacketCnt = 0;  // burg initialization
     mFadeUp.resize(mFPP, 0.0);
     mFadeDown.resize(mFPP, 0.0);
@@ -73,17 +74,17 @@ Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen)
     mNumSlots      = NumSlotsMax;
 
     for (int i = 0; i < mNumSlots; i++) {
-        int8_t* tmp = new int8_t[Hapitrip::as.audioDataLen];
+        int8_t* tmp = new int8_t[mAudioDataLen];
         mSlots.push_back(tmp);
     }
     for (int i = 0; i < mNumChannels; i++) {
         ChanData* tmp = new ChanData(i, mFPP, mHist);
         mChanData.push_back(tmp);
     }
-    mZeros = new int8_t[Hapitrip::as.audioDataLen];
-    memcpy(mZeros, mXfrBuffer, Hapitrip::as.audioDataLen);
-    mAssembledPacket = new int8_t[Hapitrip::as.audioDataLen];  // for asym
-    memcpy(mAssembledPacket, mXfrBuffer, Hapitrip::as.audioDataLen);
+    mZeros = new int8_t[mAudioDataLen];
+    memcpy(mZeros, mXfrBuffer, mAudioDataLen);
+    mAssembledPacket = new int8_t[mAudioDataLen];  // for asym
+    memcpy(mAssembledPacket, mXfrBuffer, mAudioDataLen);
     mLastLostCount = 0;  // for stats
     mIncomingTimer.start();
     mLastSeqNumIn  = -1;
@@ -96,7 +97,7 @@ Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen)
     mFPPratioNumerator   = 1;
     mFPPratioDenominator = 1;
     mFPPratioIsSet       = false;
-    mBytesPeerPacket     = Hapitrip::as.audioDataLen;
+    mBytesPeerPacket     = mAudioDataLen;
     mAssemblyCnt         = 0;
     mModCycle            = 1;
     mModSeqNumPeer       = 1;
@@ -160,7 +161,7 @@ void Regulator::setFPPratio()
         //                 << mFPPratioDenominator;
     }
     if (mFPPratioNumerator > 1) {
-        mBytesPeerPacket = Hapitrip::as.audioDataLen / mFPPratioNumerator;
+        mBytesPeerPacket = mAudioDataLen / mFPPratioNumerator;
         mModCycle        = mFPPratioNumerator - 1;
         mModSeqNumPeer   = mModSeqNum * mFPPratioNumerator;
     } else if (mFPPratioDenominator > 1) {
@@ -173,7 +174,7 @@ void Regulator::shimFPP(int8_t* buf, int len, int seq_num)
 {
     if (seq_num != -1) {
         if (!mFPPratioIsSet) {  // first peer packet
-            mPeerFPP = len / (Hapitrip::as.channels * Hapitrip::as.bytesPerSample);
+            mPeerFPP = len / (mNumChannels * mAudioBitRes);
             // bufstrategy 1 autoq mode overloads qLen with negative val
             // creates this ugly code
             if (mMsecTolerance < 0) {  // handle -q auto or, for example, -q auto10
@@ -183,8 +184,8 @@ void Regulator::shimFPP(int8_t* buf, int len, int seq_num)
                 if (mMsecTolerance != -500.0) {
                     // use it to set headroom
                     mAutoHeadroom = -mMsecTolerance;
-                    qDebug() << "PLC is in auto mode and has been set with"
-                             << mAutoHeadroom << "ms headroom";
+                    std::cout << "PLC is in auto mode and has been set with "
+                             << mAutoHeadroom << " ms headroom\n";
                     if (mAutoHeadroom > 50.0)
                         qDebug() << "That's a very large value and should be less than, "
                                     "for example, 50ms";
@@ -224,8 +225,8 @@ void Regulator::shimFPP(int8_t* buf, int len, int seq_num)
                        > 1) {  // 1/2, 1/4 peer FPP is higher, 1/(peer/local)
                 seq_num *= mFPPratioDenominator;
                 for (int i = 0; i < mFPPratioDenominator; i++) {
-                    int tmp = i * Hapitrip::as.audioDataLen;
-                    memcpy(mAssembledPacket, &buf[tmp], Hapitrip::as.audioDataLen);
+                    int tmp = i * mAudioDataLen;
+                    memcpy(mAssembledPacket, &buf[tmp], mAudioDataLen);
                     pushPacket(mAssembledPacket, seq_num);
                     seq_num++;
                 }
@@ -249,7 +250,7 @@ void Regulator::pushPacket(int8_t* buf, int seq_num)
             mMsecTolerance + (double)mIncomingTimer.nsecsElapsed() / 1000000.0;
     mLastSeqNumIn = seq_num;
     if (mLastSeqNumIn != -1)
-        memcpy(mSlots[mLastSeqNumIn % mNumSlots], buf, Hapitrip::as.audioDataLen);
+        memcpy(mSlots[mLastSeqNumIn % mNumSlots], buf, mAudioDataLen);
 };
 
 //*******************************************************************************
@@ -274,10 +275,23 @@ void Regulator::pullPacket(int8_t* buf)
                 mSkip += mModSeqNum;
             mLastSeqNumOut = next;
             if (mIncomingTiming[next] > now) {
-                memcpy(mXfrBuffer, mSlots[mLastSeqNumOut % mNumSlots], Hapitrip::as.audioDataLen);
+                memcpy(mXfrBuffer, mSlots[mLastSeqNumOut % mNumSlots], mAudioDataLen);
                 goto PACKETOK;
             }
         }
+        // make this a global value? -- same threshold as
+        // UdpDataProtocol::printUdpWaitedTooLong
+        double wait_time = 30;  // msec
+        if ((mLastSeqNumOut == mLastSeqNumIn)
+            && ((now - mIncomingTiming[mLastSeqNumOut]) > wait_time)) {
+            //                        std::cout << (mIncomingTiming[mLastSeqNumOut] - now)
+            //                        << "mLastSeqNumIn: " << mLastSeqNumIn <<
+            //                        "\tmLastSeqNumOut: " << mLastSeqNumOut << std::endl;
+            goto ZERO_OUTPUT;
+        }  // "good underrun", not a stuck client
+        //                    std::cout << "within window -- mLastSeqNumIn: " <<
+        //                    mLastSeqNumIn <<
+        //                    "\tmLastSeqNumOut: " << mLastSeqNumOut << std::endl;
         goto UNDERRUN;
     }
 
@@ -299,10 +313,10 @@ UNDERRUN : {
     }
 
 ZERO_OUTPUT:
-    memcpy(mXfrBuffer, mZeros, Hapitrip::as.audioDataLen);
+    memcpy(mXfrBuffer, mZeros, mAudioDataLen);
 
 OUTPUT:
-    memcpy(buf, mXfrBuffer, Hapitrip::as.audioDataLen);
+    memcpy(buf, mXfrBuffer, mAudioDataLen);
 };
 
 //*******************************************************************************
@@ -400,15 +414,15 @@ void Regulator::processChannel(int ch, bool glitch, int packetCnt, bool lastWasG
 sample_t Regulator::bitsToSample(int ch, int frame) {
     sample_t sample = 0.0;
     MY_TYPE * tmp = (MY_TYPE *)mXfrBuffer;
-    sample = (sample_t)tmp[ch * Hapitrip::as.FPP + frame];
-    sample *= Hapitrip::as.invScale;
+    sample = (sample_t)tmp[ch * mFPP + frame];
+    sample *= mInvScale;
     return sample;
 }
 void Regulator::sampleToBits(sample_t sample, int ch, int frame)
 {
     MY_TYPE * tmp = (MY_TYPE *)mXfrBuffer;
-    MY_TYPE tmp1 = (MY_TYPE)(sample * Hapitrip::as.scale);
-    tmp[frame + ch * Hapitrip::as.FPP] = tmp1;
+    MY_TYPE tmp1 = (MY_TYPE)(sample * mScale);
+    tmp[frame + ch * mFPP] = tmp1;
 }
 
 bool BurgAlgorithm::classify(double d)
@@ -617,11 +631,11 @@ void StdDev::tick()
             longTermStdDev = longTermStdDevAcc / (double)longTermCnt;
             longTermMaxAcc += max;
             longTermMax = longTermMaxAcc / (double)longTermCnt;
-            if (Hapitrip::as.verbose)
+            if (false)
                 std::cout << std::setw(10) << mean << std::setw(10) << lastMin << std::setw(10) << max
                           << std::setw(10) << stdDevTmp << std::setw(10) << longTermStdDev << " " << mId
                           << std::endl;
-        } else if (Hapitrip::as.verbose)
+        } else if (false)
             std::cout << "printing directly from Regulator->stdDev->tick:\n (mean / min / "
                          "max / "
                          "stdDev / longTermStdDev) \n";

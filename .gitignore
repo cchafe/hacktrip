@@ -1,3 +1,7 @@
+# QtCreator
+*.qtc_clangd*
+*.stash
+
 # C++ objects and libs
 *.slo
 *.lo

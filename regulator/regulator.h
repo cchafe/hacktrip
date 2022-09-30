@@ -5,9 +5,6 @@
 #include <math.h>
 #include <QDebug>
 #include <QElapsedTimer>
-//#include "AudioInterface.h"
-//#include "RingBuffer.h"
-//#include "../hapitrip/hapitrip.h"
 //#include <QMutex>
 //#include <QMutexLocker>
 typedef float sample_t; // from JackTrip
@@ -83,7 +80,8 @@ private:
 
 class REGULATOR_EXPORT Regulator  {
 public:
-    Regulator(int rcvChannels, int bit_res, int FPP, int qLen);
+    Regulator(int rcvChannels, int bit_res, int FPP, int qLen, double scale, double invScale, bool verbose,
+              double audioDataLen);
     // wasThisWayInJackTrip     virtual
     ~Regulator();
 
@@ -164,10 +162,10 @@ private:
     void changeGlobal_2(int);
     void changeGlobal_3(int);
     void printParams();
-    /// Pointer for the Receive RingBuffer
-    // wasThisWayInJackTrip     RingBuffer* m_b_ReceiveRingBuffer;
-    // wasThisWayInJackTrip     int m_b_BroadcastQueueLength;
-//    QMutex mMutex;                     ///< Mutex to protect read and write operations
+    double mScale;
+    double mInvScale;
+    bool mVerbose;
+    int mAudioDataLen;
 };
 
 #endif // REGULATOR_H
