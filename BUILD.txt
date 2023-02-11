@@ -15,7 +15,7 @@ the example gui interface built with Designer
 guiDemo.pro builds it in app/, with either qt5 or qt6
 qmake guiDemo.pro
 ...or...
-qmake6 gui.pro
+qmake6 guiDemo.pro
 make clean
 make
 /////////////// do this once in the terminal since libs are not system installed

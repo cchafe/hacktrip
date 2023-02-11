@@ -7,7 +7,7 @@ w.wavFilename("/tmp/test1.wav");
 class Server {
   ChuckTrip ct;
 [ 
-   ["54.238.170.179", "tokyo"]
+   ["3.112.37.118", "tokyo"]
 ,   ["35.178.207.30", "london"]
 ,    ["cmn9.stanford.edu", "cmn9"]
   , ["3.231.55.190", "Baltimore"]
