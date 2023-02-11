@@ -24,4 +24,9 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cc/hacktrip/guiDemo/libhapitrip/
 /////////////// (or just build and run in creator which keeps track of libs it creates)
 app/app
 
-
+Note: linux audio backends are set in 
+guiDemo/librtaudio/librtaudio.pri to use pipewire
+...either
+linux_sound = pipewire
+...or comment that out with a # and get
+native jack backend by default
