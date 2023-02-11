@@ -1,6 +1,6 @@
 LIBTARGET = rtaudio
 
-#linux_sound = pipewire
+linux_sound = pipewire
 
 linux-g++ | linux-g++-64 {
 contains( linux_sound, pipewire ) {
