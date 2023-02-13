@@ -341,39 +341,60 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim
 bool Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds -- (unused) from RtAudio examples/duplex
     m_streamTimePrintTime = 1.0;      // seconds -- (unused) from RtAudio examples/duplex
-
-    // various RtAudio API's
-    m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI)); // reference by enum
-    //    m_adac = new RtAudio(); // test with win10
-
-    std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
-    if (deviceIds.size() < 1) {
-        std::cout << "\nNo audio devices found!\n";
-        exit(1);
-    }
-    if (m_adac->getDeviceCount() < 1) { // something found but double check with getDeviceCount
-        std::cout << "\nNo audio devices found!\n";
-        exit(1);
-    } else {
-        std::cout << "\naudio devices found =\n"
-                  << m_adac->getDeviceCount() << "\n";
-    }
     // setup borrowed from RtAudio examples/duplex
     m_channels = Hapitrip::as.channels;
     m_fs = Hapitrip::as.sampleRate;
-    m_iDevice = m_oDevice = 0; // unused
-    m_iOffset = m_oOffset = 0; // channel 0 is first channel
+
+    // various RtAudio API's
+#ifdef USEBETA
+        m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI)); // reference by enum
+#else
+        m_adac = new RtAudio(); // test with win10
+#endif
+
+#ifdef USEBETA
+        std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
+        if (deviceIds.size() < 1) {
+            std::cout << "\nNo audio devices found!\n";
+            exit(1);
+        }
+        if (m_adac->getDeviceCount() < 1) { // something found but double check with getDeviceCount
+            std::cout << "\nNo audio devices found!\n";
+            exit(1);
+        } else {
+            std::cout << "\naudio devices found =\n"
+                      << m_adac->getDeviceCount() << "\n";
+        }
+        m_iDevice = m_oDevice = 0; // unused
+        m_iOffset = m_oOffset = 0; // channel 0 is first channel
+
+        m_iParams.nChannels = m_channels;
+        m_iParams.firstChannel = m_iOffset;
+        m_oParams.nChannels = m_channels;
+        m_oParams.firstChannel = m_oOffset;
+        m_iParams.deviceId = m_adac->getDefaultInputDevice();
+        m_oParams.deviceId = m_adac->getDefaultOutputDevice();
+#else
+        m_iParams.deviceId = 0;
+        m_iParams.nChannels = m_channels;
+        m_iParams.firstChannel = m_iOffset;
+        m_oParams.deviceId = 0;
+        m_oParams.nChannels = m_channels;
+        m_oParams.firstChannel = m_iOffset;
+        if ( m_iParams.deviceId == 0 )
+            m_iParams.deviceId = m_adac->getDefaultInputDevice();
+        if ( m_oParams.deviceId == 0 )
+            m_oParams.deviceId = m_adac->getDefaultOutputDevice();
+#endif
+
     m_adac->showWarnings(true);
-    // copy info into audio input and audio output streams
-    m_iParams.nChannels = m_channels;
-    m_iParams.firstChannel = m_iOffset;
-    m_oParams.nChannels = m_channels;
-    m_oParams.firstChannel = m_oOffset;
-    m_iParams.deviceId = m_adac->getDefaultInputDevice();
-    m_oParams.deviceId = m_adac->getDefaultOutputDevice();
+
     options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME; // non-interleaved
     options.numberOfBuffers =
             Hapitrip::as.numberOfBuffersSuggestionToRtAudio;
+    std::cout << "\niParams.deviceId = " << m_iParams.deviceId << std::endl;
+    std::cout << "\noParams.deviceId = " << m_oParams.deviceId << std::endl;
+
     // Windows DirectSound, Linux OSS, and Linux Alsa APIs only.
     // value set above is replaced during execution of the
     // RtAudio::openStream() function by the value actually used by the system
@@ -383,12 +404,22 @@ bool Audio::start() {
               << "\tfor input and output\n";
     std::cout << "\tIf another is needed, either change your settings\n";
     std::cout << "\tor the choice in the code\n";
-    unsigned int bufferFrames = 0;
+    unsigned int bufferFrames = 128;
 #ifndef AUDIO_ONLY
-    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::as.sampleRate,
-                           &bufferFrames, &Audio::wrapperProcessCallback,
-                           (void *)mUdp, &options)) // specify UDP class callback
-        std::cout << "\nCouldn't open audio device streams!\n";
+#ifdef USEBETA
+        if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT,
+                               Hapitrip::as.sampleRate,
+                               &bufferFrames, &Audio::wrapperProcessCallback,
+                               (void *)&mUdp,
+                               &options)) // specify UDP class callback
+            std::cout << "\nCouldn't open audio device streams!\n";
+#else
+        m_adac->openStream( &m_oParams, &m_iParams, FORMAT,
+                            Hapitrip::as.sampleRate, &bufferFrames,
+                            &Audio::wrapperProcessCallback,
+                            (void *)&mUdp,
+                            &options );
+#endif
 #else
     // from RtAudio examples/duplex
     if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT, Hapitrip::as.sampleRate,
@@ -412,12 +443,25 @@ bool Audio::start() {
                   << Hapitrip::as.FPP << " != "
                   << bufferFrames
                   << "\n-- make them the same then connect & run again\n";
-    else if (m_adac->startStream()) {
-        std::cout << "\nCouldn't start streams!\n";
-        fail = true;
+    else {
+
+#ifdef USEBETA
+            if (m_adac->startStream()) {
+                std::cout << "\nCouldn't start streams!\n";
+                fail = true;
+            }
+            else
+                std::cout << "\nAudio stream started" << std::endl; // phew...
+#else
+            try {
+                m_adac->startStream();
+            }
+            catch ( RtAudioError& e ) {
+                std::cout << '\n' << e.getMessage() << '\n' << std::endl;
+                fail = true;
+            }
+#endif
     }
-    else
-        std::cout << "\nAudio stream started" << std::endl; // phew...
     return fail;
 }
 
