@@ -404,20 +404,20 @@ bool Audio::start() {
               << "\tfor input and output\n";
     std::cout << "\tIf another is needed, either change your settings\n";
     std::cout << "\tor the choice in the code\n";
-    unsigned int bufferFrames = 128;
+    unsigned int bufferFrames = 256;
 #ifndef AUDIO_ONLY
 #ifdef USEBETA
         if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT,
                                Hapitrip::as.sampleRate,
                                &bufferFrames, &Audio::wrapperProcessCallback,
-                               (void *)&mUdp,
+                               (void *)mUdp,
                                &options)) // specify UDP class callback
             std::cout << "\nCouldn't open audio device streams!\n";
 #else
         m_adac->openStream( &m_oParams, &m_iParams, FORMAT,
                             Hapitrip::as.sampleRate, &bufferFrames,
                             &Audio::wrapperProcessCallback,
-                            (void *)&mUdp,
+                            (void *)mUdp,
                             &options );
 #endif
 #else
@@ -446,6 +446,7 @@ bool Audio::start() {
     else {
 
 #ifdef USEBETA
+        std::cout << "\nAudio stream starting" << std::endl; // phew...
             if (m_adac->startStream()) {
                 std::cout << "\nCouldn't start streams!\n";
                 fail = true;

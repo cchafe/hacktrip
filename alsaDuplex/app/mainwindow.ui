@@ -89,12 +89,12 @@
      </property>
      <item>
       <property name="text">
-       <string>128</string>
+       <string>256</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>256</string>
+       <string>128</string>
       </property>
      </item>
      <item>
