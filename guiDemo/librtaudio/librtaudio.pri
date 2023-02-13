@@ -5,7 +5,8 @@ linux_sound = pipewire
 linux-g++ | linux-g++-64 {
 contains( linux_sound, pipewire ) {
     message( "Configuring for pipewire..." )
-    LIBS += -L../librtaudio -lrtaudio  -L/usr/lib64/pipewire-0.3/jack -ljack -lpulse-simple -lasound -lpulse
+#     LIBS += -L../librtaudio -lrtaudio  -L/usr/lib64/pipewire-0.3/jack -ljack -lpulse-simple -lasound -lpulse
+    LIBS += -L../librtaudio -lrtaudio  -lasound
 } else {
 message( "Configuring for native jack..." )
 LIBS += -L../librtaudio -lrtaudio -ljack -lpulse-simple -lasound -lpulse

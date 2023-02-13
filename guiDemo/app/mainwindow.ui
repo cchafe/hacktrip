@@ -89,12 +89,12 @@
      </property>
      <item>
       <property name="text">
-       <string>256</string>
+       <string>128</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>128</string>
+       <string>256</string>
       </property>
      </item>
      <item>
@@ -145,7 +145,7 @@
      </property>
      <item>
       <property name="text">
-       <string>15.220.17.193</string>
+       <string>15.220.17.7</string>
       </property>
      </item>
      <item>
@@ -263,6 +263,9 @@
      </property>
     </widget>
     <widget class="QComboBox" name="audioComboBox">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="geometry">
       <rect>
        <x>100</x>
@@ -272,8 +275,13 @@
       </rect>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>0</number>
      </property>
+     <item>
+      <property name="text">
+       <string>LINUX_ALSA</string>
+      </property>
+     </item>
      <item>
       <property name="text">
        <string>UNSPECIFIED</string>
@@ -282,11 +290,6 @@
      <item>
       <property name="text">
        <string>MACOSX_CORE</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>LINUX_ALSA</string>
       </property>
      </item>
      <item>
@@ -332,8 +335,11 @@
      <property name="text">
       <string>PLC</string>
      </property>
-     <property name="checked">
+     <property name="checkable">
       <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
      </property>
     </widget>
    </widget>

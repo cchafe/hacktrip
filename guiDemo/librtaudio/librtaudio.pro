@@ -11,7 +11,8 @@ SOURCES += ../../rtaudio/RtAudio.cpp
 #cc from rtaudio/Makefile after rtaudio/autogen.sh default =
 # -D__LINUX_ALSA__ -D__LINUX_PULSE__ -D__UNIX_JACK__
 linux-g++ | linux-g++-64 {
-  QMAKE_CXXFLAGS += -D__LINUX_ALSA__ -D__LINUX_PULSE__ -D__UNIX_JACK__
+  QMAKE_CXXFLAGS += -D__LINUX_ALSA__
+  LIBS += -lasound -lpthread
 }
 macx {
   QMAKE_CXXFLAGS += -D__MACOSX_CORE__
