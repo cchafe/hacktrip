@@ -404,7 +404,7 @@ bool Audio::start() {
               << "\tfor input and output\n";
     std::cout << "\tIf another is needed, either change your settings\n";
     std::cout << "\tor the choice in the code\n";
-    unsigned int bufferFrames = 256;
+    unsigned int bufferFrames = Hapitrip::as.FPP;
 #ifndef AUDIO_ONLY
 #ifdef USEBETA
         if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT,
