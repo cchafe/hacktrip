@@ -351,7 +351,8 @@ bool Audio::start() {
 #else
         m_adac = new RtAudio(); // test with win10
 #endif
-
+        m_iOffset = 0;
+        m_oOffset = 0; // channel 0 is first channel
 #ifdef USEBETA
         std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
         if (deviceIds.size() < 1) {
@@ -366,8 +367,6 @@ bool Audio::start() {
                       << m_adac->getDeviceCount() << "\n";
         }
         m_iDevice = m_oDevice = 0; // unused
-        m_iOffset = m_oOffset = 0; // channel 0 is first channel
-
         m_iParams.nChannels = m_channels;
         m_iParams.firstChannel = m_iOffset;
         m_oParams.nChannels = m_channels;
@@ -380,7 +379,7 @@ bool Audio::start() {
         m_iParams.firstChannel = m_iOffset;
         m_oParams.deviceId = 0;
         m_oParams.nChannels = m_channels;
-        m_oParams.firstChannel = m_iOffset;
+        m_oParams.firstChannel = m_oOffset;
         if ( m_iParams.deviceId == 0 )
             m_iParams.deviceId = m_adac->getDefaultInputDevice();
         if ( m_oParams.deviceId == 0 )
