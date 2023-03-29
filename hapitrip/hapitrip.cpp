@@ -6,6 +6,9 @@
 #include <ios>
 #include <iomanip>
 
+// RegulatorThread
+#include <QThread>
+
 APIsettings Hapitrip::as; // declare static APIsettings instance
 
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
@@ -146,6 +149,8 @@ void UDP::start() {
 
     mTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen]; // for when not using an audio callback
     memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
+
+    // no RegulatorThread
     reg = new Regulator(Hapitrip::as.channels,
                         Hapitrip::as.bytesPerSample,
                         Hapitrip::as.FPP,
@@ -153,6 +158,19 @@ void UDP::start() {
                         Hapitrip::as.scale, Hapitrip::as.invScale,
                         Hapitrip::as.verbose,
                         Hapitrip::as.audioDataLen);
+
+    // RegulatorThread
+    mRegulatorThreadPtr = new QThread();
+    mRegulatorThreadPtr->setObjectName("RegulatorThread");
+    Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(reg);
+    RegulatorWorker* workerPtr = new RegulatorWorker(regulatorPtr);
+    workerPtr->moveToThread(mRegulatorThreadPtr);
+    QObject::connect(this, &UDP::signalReceivedNetworkPacket, workerPtr,
+                     &RegulatorWorker::pullPacket, Qt::QueuedConnection);
+    mRegulatorThreadPtr->start();
+    mRegulatorWorkerPtr = workerPtr;
+
+
 };
 // example system commands that show udp port in use in case of trouble starting
 // sudo lsof -i:4464
@@ -198,10 +216,13 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
 }
 
 void UDP::ringBufferPull() { // pull next packet to play out from ring
-    if (Hapitrip::as.usePLC)
-        reg->pullPacket(mTmpAudioBuf);
+    if (Hapitrip::as.usePLC) {
+        // no RegulatorThread
+         reg->pullPacket(mTmpAudioBuf);
+        // RegulatorThread
+        emit signalReceivedNetworkPacket();
     //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
-    else {
+    } else {
         if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;

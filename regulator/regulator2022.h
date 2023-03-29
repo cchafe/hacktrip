@@ -1,6 +1,6 @@
 #ifndef REGULATOR_H
 #define REGULATOR_H
-
+// 2022
 #include "regulator_global.h"
 #include <math.h>
 #include <QDebug>

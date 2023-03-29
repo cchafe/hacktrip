@@ -94,7 +94,18 @@ public slots:
 private:
     int8_t *mTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     QString mServer; // peer address
+
+    // no RegulatorThread
     Regulator *reg;
+
+    // RegulatorThread
+    /// thread used to pull packets from Regulator (if mBufferStrategy==3)
+    QThread* mRegulatorThreadPtr;
+    /// worker used to pull packets from Regulator (if mBufferStrategy==3)
+    QObject* mRegulatorWorkerPtr;
+signals:
+    void signalReceivedNetworkPacket();
+
 };
 
 class TCP : public QTcpSocket {
