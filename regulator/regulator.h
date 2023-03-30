@@ -245,7 +245,7 @@ public:
     */
 };
 
-class RegulatorWorker : public QObject
+class REGULATOR_EXPORT RegulatorWorker : public QObject
 {
     Q_OBJECT;
 

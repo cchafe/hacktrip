@@ -158,15 +158,17 @@ public:
     // called by RegulatorWorker after each audio callback, to prep next packet
     void pullPacket();
 
-    // wasThisWayInJackTrip    virtual
-    void readSlotNonBlocking(int8_t* ptrToReadSlot)
+    // wasThisWayInJackTrip
+    /*
+    virtual void readSlotNonBlocking(int8_t* ptrToReadSlot)
     {
         ::memcpy(ptrToReadSlot, mNextPacket.load(std::memory_order_acquire), mBytes);
     }
+    */
 
     // wasThisWayInJackTrip
     /*
-     * virtual void readBroadcastSlot(int8_t* ptrToReadSlot)
+    virtual void readBroadcastSlot(int8_t* ptrToReadSlot)
     {
         m_b_BroadcastRingBuffer->readBroadcastSlot(ptrToReadSlot);
     }
@@ -243,7 +245,7 @@ public:
     */
 };
 
-class RegulatorWorker : public QObject
+class REGULATOR_EXPORT RegulatorWorker : public QObject
 {
     Q_OBJECT;
 
@@ -264,3 +266,4 @@ class RegulatorWorker : public QObject
 };
 
 #endif  //__REGULATOR_H__
+

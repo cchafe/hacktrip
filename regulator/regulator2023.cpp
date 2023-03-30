@@ -317,17 +317,21 @@ void Regulator::shimFPP(const int8_t* buf, int len, int seq_num)
             // bufstrategy 1 autoq mode overloads qLen with negative val
             // creates this ugly code
             if (mMsecTolerance < 0) {  // handle -q auto or, for example, -q auto10
-                mAuto = true;
+                mAuto = false; // force it to false
                 // default is -500 from bufstrategy 1 autoq mode
                 // tweak
                 if (mMsecTolerance != -500.0) {
                     // use it to set headroom
                     mAutoHeadroom = -mMsecTolerance;
-                    qDebug() << "PLC is in auto mode and has been set with"
-                             << mAutoHeadroom << "ms headroom";
+                    if (mAuto)
+                        std::cout << "PLC is in auto mode and has been set with "
+                             << mAutoHeadroom << "ms headroom\n";
+                    else
+                        std::cout << "PLC is NOT in auto mode and has been set with "
+                             << mAutoHeadroom << "ms headroom\n";
                     if (mAutoHeadroom > 50.0)
-                        qDebug() << "That's a very large value and should be less than, "
-                                    "for example, 50ms";
+                        std::cout << "That's a very large value and should be less than, "
+                                    "for example, 50ms\n";
                 }
                 // found an interesting relationship between mPeerFPP and initial
                 // mMsecTolerance mPeerFPP*0.5 is pretty good though that's an oddball
@@ -372,7 +376,7 @@ void Regulator::shimFPP(const int8_t* buf, int len, int seq_num)
         pushStat->tick();
         double adjustAuto =
             pushStat->calcAuto(mAutoHeadroom, mFPPdurMsec, mPeerFPPdurMsec);
-        //        qDebug() << adjustAuto;
+//                std::cout << adjustAuto << "\n";
         if (mAuto && (pushStat->lastTime > AutoInitDur))
             mMsecTolerance = adjustAuto;
     }
@@ -394,6 +398,7 @@ void Regulator::pushPacket(const int8_t* buf, int seq_num)
 //*******************************************************************************
 
 // notInJackTrip
+/*
 void Regulator::pullPacket(int8_t* buf)
 {
     // wasThisWayInJackTrip         QMutexLocker locker(&mMutex);
@@ -458,10 +463,16 @@ ZERO_OUTPUT:
 OUTPUT:
     memcpy(buf, mXfrBuffer, mAudioDataLen);
 };
-
+*/
 
 
 // wasThisWayInJackTrip
+
+void Regulator::pullPacket(int8_t* buf)
+{
+  memcpy(buf, mNextPacket.load(std::memory_order_acquire), mBytes);
+};
+
 void Regulator::pullPacket()
 {
     // wasThisWayInJackTrip         QMutexLocker locker(&mMutex);
@@ -528,8 +539,10 @@ OUTPUT:
     mNextPacket.store(mXfrBuffer, std::memory_order_release);
     if (mXfrBuffer == mPullQueue) {
         mXfrBuffer = mPullQueue + mBytes;
+//        std::cout << 0 << std::endl;
     } else {
         mXfrBuffer = mPullQueue;
+//        std::cout << 1 << std::endl;
     }
 };
 
@@ -934,3 +947,4 @@ bool Regulator::getStats(RingBuffer::IOStat* stat, bool reset)
     return true;
 }
 */
+

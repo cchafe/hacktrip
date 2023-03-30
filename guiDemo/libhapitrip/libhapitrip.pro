@@ -8,6 +8,11 @@ QT += network
 include(../librtaudio/librtaudio.pri)
 include(../libregulator/libregulator.pri)
 
+win32 {
+# 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
+# also see hapitrip.h for possible setting of flag
+DEFINES += USEBETA
+}
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
