@@ -347,6 +347,25 @@
       <bool>false</bool>
      </property>
     </widget>
+    <widget class="QCheckBox" name="plcThreadCheckBox">
+     <property name="geometry">
+      <rect>
+       <x>160</x>
+       <y>310</y>
+       <width>87</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>PLC thread</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

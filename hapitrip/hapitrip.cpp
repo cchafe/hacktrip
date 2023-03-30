@@ -150,27 +150,27 @@ void UDP::start() {
     mTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen]; // for when not using an audio callback
     memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
 
-    // no RegulatorThread
-    reg = new Regulator(Hapitrip::as.channels,
+    mReg = new Regulator(Hapitrip::as.channels,
                         Hapitrip::as.bytesPerSample,
                         Hapitrip::as.FPP,
                         -3, // qlen needs to be param
                         Hapitrip::as.scale, Hapitrip::as.invScale,
                         Hapitrip::as.verbose,
-                        Hapitrip::as.audioDataLen);
+                        Hapitrip::as.audioDataLen,
+                        Hapitrip::as.usePLCthread);
 
-    // RegulatorThread
-    mRegulatorThreadPtr = new QThread();
-    mRegulatorThreadPtr->setObjectName("RegulatorThread");
-    Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(reg);
-    RegulatorWorker* workerPtr = new RegulatorWorker(regulatorPtr);
-    workerPtr->moveToThread(mRegulatorThreadPtr);
-    QObject::connect(this, &UDP::signalReceivedNetworkPacket, workerPtr,
-                     &RegulatorWorker::pullPacket, Qt::QueuedConnection);
-    mRegulatorThreadPtr->start();
-    mRegulatorWorkerPtr = workerPtr;
-
-
+    // always addd RegulatorThread even if unused
+    if (true) {
+        mRegulatorThreadPtr = new QThread();
+        mRegulatorThreadPtr->setObjectName("RegulatorThread");
+        Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(mReg);
+        RegulatorWorker* workerPtr = new RegulatorWorker(regulatorPtr);
+        workerPtr->moveToThread(mRegulatorThreadPtr);
+        QObject::connect(this, &UDP::signalReceivedNetworkPacket, workerPtr,
+                         &RegulatorWorker::pullPacket, Qt::QueuedConnection);
+        mRegulatorThreadPtr->start();
+        mRegulatorWorkerPtr = workerPtr;
+    }
 };
 // example system commands that show udp port in use in case of trouble starting
 // sudo lsof -i:4464
@@ -207,7 +207,7 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
 
 
     if (Hapitrip::as.usePLC)
-        reg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
+        mReg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
     else {
         memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
         mWptr++;
@@ -217,12 +217,12 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
 
 void UDP::ringBufferPull() { // pull next packet to play out from ring
     if (Hapitrip::as.usePLC) {
-        // no RegulatorThread
-         reg->pullPacket(mTmpAudioBuf);
-        // RegulatorThread
-        emit signalReceivedNetworkPacket();
-    //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
-    } else {
+        mReg->pullPacket(mTmpAudioBuf);
+        //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
+        if (Hapitrip::as.usePLCthread) { // RegulatorThread
+            emit signalReceivedNetworkPacket();
+        }
+    } else  {
         if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;
@@ -368,43 +368,43 @@ bool Audio::start() {
 
     // various RtAudio API's
 #ifdef USEBETA
-        m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI)); // reference by enum
+    m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI)); // reference by enum
 #else
-        m_adac = new RtAudio(); // test with win10
+    m_adac = new RtAudio(); // test with win10
 #endif
-        m_iOffset = 0;
-        m_oOffset = 0; // channel 0 is first channel
+    m_iOffset = 0;
+    m_oOffset = 0; // channel 0 is first channel
 #ifdef USEBETA
-        std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
-        if (deviceIds.size() < 1) {
-            std::cout << "\nNo audio devices found!\n";
-            exit(1);
-        }
-        if (m_adac->getDeviceCount() < 1) { // something found but double check with getDeviceCount
-            std::cout << "\nNo audio devices found!\n";
-            exit(1);
-        } else {
-            std::cout << "\naudio devices found =\n"
-                      << m_adac->getDeviceCount() << "\n";
-        }
-        m_iDevice = m_oDevice = 0; // unused
-        m_iParams.nChannels = m_channels;
-        m_iParams.firstChannel = m_iOffset;
-        m_oParams.nChannels = m_channels;
-        m_oParams.firstChannel = m_oOffset;
-        m_iParams.deviceId = m_adac->getDefaultInputDevice();
-        m_oParams.deviceId = m_adac->getDefaultOutputDevice();
+    std::vector<unsigned int> deviceIds = m_adac->getDeviceIds(); // list audio devices
+    if (deviceIds.size() < 1) {
+        std::cout << "\nNo audio devices found!\n";
+        exit(1);
+    }
+    if (m_adac->getDeviceCount() < 1) { // something found but double check with getDeviceCount
+        std::cout << "\nNo audio devices found!\n";
+        exit(1);
+    } else {
+        std::cout << "\naudio devices found =\n"
+                  << m_adac->getDeviceCount() << "\n";
+    }
+    m_iDevice = m_oDevice = 0; // unused
+    m_iParams.nChannels = m_channels;
+    m_iParams.firstChannel = m_iOffset;
+    m_oParams.nChannels = m_channels;
+    m_oParams.firstChannel = m_oOffset;
+    m_iParams.deviceId = m_adac->getDefaultInputDevice();
+    m_oParams.deviceId = m_adac->getDefaultOutputDevice();
 #else
-        m_iParams.deviceId = 0;
-        m_iParams.nChannels = m_channels;
-        m_iParams.firstChannel = m_iOffset;
-        m_oParams.deviceId = 0;
-        m_oParams.nChannels = m_channels;
-        m_oParams.firstChannel = m_oOffset;
-        if ( m_iParams.deviceId == 0 )
-            m_iParams.deviceId = m_adac->getDefaultInputDevice();
-        if ( m_oParams.deviceId == 0 )
-            m_oParams.deviceId = m_adac->getDefaultOutputDevice();
+    m_iParams.deviceId = 0;
+    m_iParams.nChannels = m_channels;
+    m_iParams.firstChannel = m_iOffset;
+    m_oParams.deviceId = 0;
+    m_oParams.nChannels = m_channels;
+    m_oParams.firstChannel = m_oOffset;
+    if ( m_iParams.deviceId == 0 )
+        m_iParams.deviceId = m_adac->getDefaultInputDevice();
+    if ( m_oParams.deviceId == 0 )
+        m_oParams.deviceId = m_adac->getDefaultOutputDevice();
 #endif
 
     m_adac->showWarnings(true);
@@ -427,18 +427,18 @@ bool Audio::start() {
     unsigned int bufferFrames = Hapitrip::as.FPP;
 #ifndef AUDIO_ONLY
 #ifdef USEBETA
-        if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT,
-                               Hapitrip::as.sampleRate,
-                               &bufferFrames, &Audio::wrapperProcessCallback,
-                               (void *)mUdp,
-                               &options)) // specify UDP class callback
-            std::cout << "\nCouldn't open audio device streams!\n";
+    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT,
+                           Hapitrip::as.sampleRate,
+                           &bufferFrames, &Audio::wrapperProcessCallback,
+                           (void *)mUdp,
+                           &options)) // specify UDP class callback
+        std::cout << "\nCouldn't open audio device streams!\n";
 #else
-        m_adac->openStream( &m_oParams, &m_iParams, FORMAT,
-                            Hapitrip::as.sampleRate, &bufferFrames,
-                            &Audio::wrapperProcessCallback,
-                            (void *)mUdp,
-                            &options );
+    m_adac->openStream( &m_oParams, &m_iParams, FORMAT,
+                        Hapitrip::as.sampleRate, &bufferFrames,
+                        &Audio::wrapperProcessCallback,
+                        (void *)mUdp,
+                        &options );
 #endif
 #else
     // from RtAudio examples/duplex
@@ -467,20 +467,20 @@ bool Audio::start() {
 
 #ifdef USEBETA
         std::cout << "\nAudio stream starting" << std::endl; // phew...
-            if (m_adac->startStream()) {
-                std::cout << "\nCouldn't start streams!\n";
-                fail = true;
-            }
-            else
-                std::cout << "\nAudio stream started" << std::endl; // phew...
+        if (m_adac->startStream()) {
+            std::cout << "\nCouldn't start streams!\n";
+            fail = true;
+        }
+        else
+            std::cout << "\nAudio stream started" << std::endl; // phew...
 #else
-            try {
-                m_adac->startStream();
-            }
-            catch ( RtAudioError& e ) {
-                std::cout << '\n' << e.getMessage() << '\n' << std::endl;
-                fail = true;
-            }
+        try {
+            m_adac->startStream();
+        }
+        catch ( RtAudioError& e ) {
+            std::cout << '\n' << e.getMessage() << '\n' << std::endl;
+            fail = true;
+        }
 #endif
     }
     return fail;

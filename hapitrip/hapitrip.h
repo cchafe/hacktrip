@@ -77,6 +77,7 @@ public:
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
 #endif
+    Regulator * mReg;
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -97,10 +98,7 @@ private:
     int8_t *mTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     QString mServer; // peer address
 
-    // no RegulatorThread
-    Regulator *reg;
 
-    // RegulatorThread
     /// thread used to pull packets from Regulator (if mBufferStrategy==3)
     QThread* mRegulatorThreadPtr;
     /// worker used to pull packets from Regulator (if mBufferStrategy==3)
@@ -180,6 +178,7 @@ class APIsettings {
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
+    static const bool dUsePLCthread = 0;
 #endif
 
 private:
@@ -205,6 +204,7 @@ private:
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
     bool usePLC = dUsePLC;
+    bool usePLCthread = dUsePLCthread;
 
     QString server = NULL; // the server name or IP address
     friend class TCP;
@@ -246,6 +246,13 @@ public:
 
     int getUsePLC() { return as.usePLC; }
     void setUsePLC(int use) { as.usePLC = use; }
+
+    int getUsePLCthread() { return as.usePLCthread; }
+    void setUsePLCthread(int use) {
+        as.usePLCthread = use;
+        if (mUdp != nullptr)
+            mUdp->mReg->setUsePLCthread(use);
+    }
 
 #ifndef AUDIO_ONLY
     int getLocalUDPaudioPort() { return as.localAudioUdpPort; };

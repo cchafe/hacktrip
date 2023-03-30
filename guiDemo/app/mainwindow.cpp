@@ -70,14 +70,19 @@ void MainWindow::on_plcCheckBox_stateChanged(int arg1)
     ht->setUsePLC(arg1);
 }
 
+void MainWindow::on_plcThreadCheckBox_stateChanged(int arg1)
+{
+    ht->setUsePLCthread(arg1);
+}
+
 void MainWindow::updateStateFromUI() {
     mServer = ui->serverComboBox->currentText();
     ht->setFPP(ui->FPPcomboBox->currentText().toInt());
     ht->setChannels(ui->channelsSpinBox->value());
     ht->setSampleRate(ui->srateComboBox->currentText().toInt());
     ht->setUsePLC(ui->plcCheckBox->checkState());
+    ht->setUsePLCthread(ui->plcThreadCheckBox->checkState());
 };
-
 
 
 

@@ -126,7 +126,10 @@ public:
     Regulator(int rcvChannels, int bit_res, int FPP, int qLen,
     // wasThisWayInJackTrip                       int bqLen,
     // notInJackTrip
-                         double scale, double invScale, bool verbose, double audioDataLen);
+                         double scale, double invScale, bool verbose, double audioDataLen,
+              bool workerThread);
+    // notInJackTrip
+void setUsePLCthread(int use);
 
     // wasThisWayInJackTrip     virtual
     ~Regulator();
@@ -236,6 +239,7 @@ public:
     double mInvScale;
     bool mVerbose;
     int mAudioDataLen;
+    bool mWorkerThread;
 
     // wasThisWayInJackTrip
     /// Pointer for the Broadcast RingBuffer
