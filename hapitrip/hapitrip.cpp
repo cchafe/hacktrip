@@ -159,16 +159,16 @@ void UDP::start() {
                         Hapitrip::as.verbose,
                         Hapitrip::as.audioDataLen);
 
-    // RegulatorThread
-    mRegulatorThreadPtr = new QThread();
-    mRegulatorThreadPtr->setObjectName("RegulatorThread");
-    Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(reg);
-    RegulatorWorker* workerPtr = new RegulatorWorker(regulatorPtr);
-    workerPtr->moveToThread(mRegulatorThreadPtr);
-    QObject::connect(this, &UDP::signalReceivedNetworkPacket, workerPtr,
-                     &RegulatorWorker::pullPacket, Qt::QueuedConnection);
-    mRegulatorThreadPtr->start();
-    mRegulatorWorkerPtr = workerPtr;
+    // RegulatorThread used in regulator 2023
+//    mRegulatorThreadPtr = new QThread();
+//    mRegulatorThreadPtr->setObjectName("RegulatorThread");
+//    Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(reg);
+//    RegulatorWorker* workerPtr = new RegulatorWorker(regulatorPtr);
+//    workerPtr->moveToThread(mRegulatorThreadPtr);
+//    QObject::connect(this, &UDP::signalReceivedNetworkPacket, workerPtr,
+//                     &RegulatorWorker::pullPacket, Qt::QueuedConnection);
+//    mRegulatorThreadPtr->start();
+//    mRegulatorWorkerPtr = workerPtr;
 
 
 };
