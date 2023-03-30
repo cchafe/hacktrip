@@ -321,7 +321,7 @@ void Regulator::shimFPP(const int8_t* buf, int len, int seq_num)
             // bufstrategy 1 autoq mode overloads qLen with negative val
             // creates this ugly code
             if (mMsecTolerance < 0) {  // handle -q auto or, for example, -q auto10
-                mAuto = false; // force it to false
+                mAuto = true;
                 // default is -500 from bufstrategy 1 autoq mode
                 // tweak
                 if (mMsecTolerance != -500.0) {
