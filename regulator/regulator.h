@@ -123,11 +123,12 @@ class StdDev
 
 class REGULATOR_EXPORT Regulator  {
 public:
-    Regulator(int rcvChannels, int bit_res, int FPP, int qLen,
-    // wasThisWayInJackTrip                       int bqLen,
-    // notInJackTrip
-                         double scale, double invScale, bool verbose, double audioDataLen,
-              bool workerThread);
+    Regulator(int rcvChannels, int bit_res, int FPP, int qLen, int bufStrategy,
+// wasThisWayInJackTrip               int bqLen
+// notInJackTrip
+     double scale, double invScale, bool verbose, double audioDataLen);
+
+
     // notInJackTrip
 void setUsePLCthread(int use);
 
@@ -154,20 +155,18 @@ void setUsePLCthread(int use);
     }
     */
 
-    // notInJackTrip
     void pullPacket(int8_t* buf);
 
-// wasThisWayInJackTrip
-    // called by RegulatorWorker after each audio callback, to prep next packet
     void pullPacket();
 
-    // wasThisWayInJackTrip
-    /*
     virtual void readSlotNonBlocking(int8_t* ptrToReadSlot)
     {
-        ::memcpy(ptrToReadSlot, mNextPacket.load(std::memory_order_acquire), mBytes);
+        if (mBufferStrategy == 3) {  // PLC workerThread
+            ::memcpy(ptrToReadSlot, mNextPacket.load(std::memory_order_acquire), mBytes);
+        } else {  // mBufferStrategy == 4 compute in this thread
+            pullPacket(ptrToReadSlot);
+        }
     }
-    */
 
     // wasThisWayInJackTrip
     /*
@@ -229,6 +228,10 @@ void setUsePLCthread(int use);
     double mAutoHeadroom;
     double mFPPdurMsec;
     double mPeerFPPdurMsec;
+// notInJackTrip -- private in JackTrip
+public:
+    int mBufferStrategy;
+private:
     void changeGlobal(double);
     void changeGlobal_2(int);
     void changeGlobal_3(int);
@@ -239,7 +242,6 @@ void setUsePLCthread(int use);
     double mInvScale;
     bool mVerbose;
     int mAudioDataLen;
-    bool mWorkerThread;
 
     // wasThisWayInJackTrip
     /// Pointer for the Broadcast RingBuffer

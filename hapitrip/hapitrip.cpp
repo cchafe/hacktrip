@@ -151,15 +151,17 @@ void UDP::start() {
     memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
 
     mReg = new Regulator(Hapitrip::as.channels,
-                        Hapitrip::as.bytesPerSample,
-                        Hapitrip::as.FPP,
-                        -3, // qlen needs to be param
-                        Hapitrip::as.scale, Hapitrip::as.invScale,
-                        Hapitrip::as.verbose,
-                        Hapitrip::as.audioDataLen,
-                        Hapitrip::as.usePLCthread);
+                         Hapitrip::as.bytesPerSample,
+                         Hapitrip::as.FPP,
+                         -3, // qlen needs to be param
+                         Hapitrip::as.usePLCthread, // bool sets thread or not thread
+                         Hapitrip::as.scale, Hapitrip::as.invScale,
+                         Hapitrip::as.verbose,
+                         Hapitrip::as.audioDataLen);
 
     // always addd RegulatorThread even if unused
+    // JackTrip is different, RegulatorThread only if bufstrategy 3, only settable at launch
+    // HackTrip allows changes while running, so RegulatorThread needs to exist
     if (true) {
         mRegulatorThreadPtr = new QThread();
         mRegulatorThreadPtr->setObjectName("RegulatorThread");
@@ -215,14 +217,18 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
     }
 }
 
-void UDP::ringBufferPull() { // pull next packet to play out from ring
-    if (Hapitrip::as.usePLC) {
-        mReg->pullPacket(mTmpAudioBuf);
+// JackTrip mBufferStrategy 1,2,3,4
+// virtual void receiveNetworkPacket(int8_t* ptrToReadSlot)
+// translates to ringBufferPull()
+
+void UDP::ringBufferPull() { // pull next packet to play out from regulator or ring
+    if (Hapitrip::as.usePLC) { // same as mBufferStrategy 3,4
+        mReg->readSlotNonBlocking(mTmpAudioBuf);
         //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
-        if (Hapitrip::as.usePLCthread) { // RegulatorThread
+        if (mReg->mBufferStrategy == 3) { // use RegulatorThread
             emit signalReceivedNetworkPacket();
         }
-    } else  {
+    } else  { // simple version of mBufferStrategy 1,2
         if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;

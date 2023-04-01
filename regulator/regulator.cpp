@@ -113,13 +113,11 @@ constexpr int MaxFPP        = 1024;  // tested up to this FPP
 typedef signed short MY_TYPE; // audio interface data is 16bit ints (using MY_TYPE from rtaudio)
 
 //*******************************************************************************
-Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen,
-                     // wasThisWayInJackTrip                       int bqLen,
-                     // notInJackTrip
-                     double scale, double invScale, bool verbose, double audioDataLen,
-                     bool workerThread
-                     )
-    :
+Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen, int bufStrategy,
+// wasThisWayInJackTrip               int bqLen
+// notInJackTrip
+ double scale, double invScale, bool verbose, double audioDataLen) :
+
       // wasThisWayInJackTrip          RingBuffer(0, 0)
       // wasThisWayInJackTrip        ,
       mNumChannels(rcvChannels)
@@ -127,16 +125,18 @@ Regulator::Regulator(int rcvChannels, int bit_res, int FPP, int qLen,
     , mFPP(FPP)
     , mMsecTolerance((double)qLen)  // handle non-auto mode, expects positive qLen
     , mAuto(false)
+    , mBufferStrategy(bufStrategy)
     // notInJackTrip
     , mScale (scale)
     , mInvScale (invScale)
     , mVerbose(verbose)
     , mAudioDataLen(audioDataLen)
-    , mWorkerThread(workerThread)
 
     // wasThisWayInJackTrip        , m_b_BroadcastQueueLength(bqLen)
 {
-    std::cout << "mWorkerThread " << mWorkerThread << std::endl;
+    // notInJackTrip
+    setUsePLCthread(mBufferStrategy); // gets bool from constructor sets int, false=3, true=4
+
     // catch settings that are compute bound using long HIST
     // hub client rcvChannels is set from client's settings parameters
     // hub server rcvChannels is set from connecting client, not from hub parameters
@@ -402,21 +402,20 @@ void Regulator::pushPacket(const int8_t* buf, int seq_num)
 //*******************************************************************************
 
 // notInJackTrip
-void Regulator::setUsePLCthread(int use) { mWorkerThread = use; }
+void Regulator::setUsePLCthread(int use) {
+    mBufferStrategy = (use) ? 3 : 4;
+    std::cout << "mBufferStrategy " << mBufferStrategy << std::endl;
+}
 
 void Regulator::pullPacket(int8_t* buf)
-{
-    if (mWorkerThread) {
-        memcpy(buf, mNextPacket.load(std::memory_order_acquire), mBytes);
-    } else {
-        pullPacket();
-        memcpy(buf, mXfrBuffer, mBytes);
-    }
+{  // only for mBufferStrategy == 4, not using workerThread
+    pullPacket();
+    memcpy(buf, mXfrBuffer, mBytes);
 }
 
 void Regulator::pullPacket()
 {
-    // wasThisWayInJackTrip         QMutexLocker locker(&mMutex);
+    // wasThisWayInJackTrip QMutexLocker locker(&mMutex);
     mSkip = 0;
     if ((mLastSeqNumIn == -1) || (!mFPPratioIsSet)) {
         goto ZERO_OUTPUT;
@@ -443,7 +442,7 @@ void Regulator::pullPacket()
         // UdpDataProtocol::printUdpWaitedTooLong
         double wait_time = 30;  // msec
         if ((mLastSeqNumOut == mLastSeqNumIn)
-                && ((now - mIncomingTiming[mLastSeqNumOut]) > wait_time)) {
+            && ((now - mIncomingTiming[mLastSeqNumOut]) > wait_time)) {
             //                        std::cout << (mIncomingTiming[mLastSeqNumOut] - now)
             //                        << "mLastSeqNumIn: " << mLastSeqNumIn <<
             //                        "\tmLastSeqNumOut: " << mLastSeqNumOut << std::endl;
@@ -456,36 +455,33 @@ void Regulator::pullPacket()
     }
 
 PACKETOK : {
-        if (mSkip) {
-            processPacket(true);
-            pullStat->plcOverruns += mSkip;
-        } else
-            processPacket(false);
-        pullStat->tick();
-        goto OUTPUT;
-    }
+    if (mSkip) {
+        processPacket(true);
+        pullStat->plcOverruns += mSkip;
+    } else
+        processPacket(false);
+    pullStat->tick();
+    goto OUTPUT;
+}
 
 UNDERRUN : {
-        processPacket(true);
-        pullStat->plcUnderruns++;  // count late
-        pullStat->tick();
-        goto OUTPUT;
-    }
+    processPacket(true);
+    pullStat->plcUnderruns++;  // count late
+    pullStat->tick();
+    goto OUTPUT;
+}
 
 ZERO_OUTPUT:
     memcpy(mXfrBuffer, mZeros, mBytes);
 
 OUTPUT:
-    if (mWorkerThread) {
-        // swap positions of mXfrBuffer and mNextPacket
-        mNextPacket.store(mXfrBuffer, std::memory_order_release);
-        if (mXfrBuffer == mPullQueue) {
-            mXfrBuffer = mPullQueue + mBytes;
-        } else {
-            mXfrBuffer = mPullQueue;
-        }
+    // swap positions of mXfrBuffer and mNextPacket
+    mNextPacket.store(mXfrBuffer, std::memory_order_release);
+    if (mXfrBuffer == mPullQueue) {
+        mXfrBuffer = mPullQueue + mBytes;
+    } else {
+        mXfrBuffer = mPullQueue;
     }
-    // now happens in caller -- memcpy(buf, mXfrBuffer, mAudioDataLen);
 };
 
 //*******************************************************************************
