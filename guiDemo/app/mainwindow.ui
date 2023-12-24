@@ -94,6 +94,11 @@
      </item>
      <item>
       <property name="text">
+       <string>64</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>256</string>
       </property>
      </item>
@@ -146,6 +151,11 @@
      <item>
       <property name="text">
        <string>jackloop128.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>jackloop64.stanford.edu</string>
       </property>
      </item>
      <item>
@@ -374,7 +384,7 @@
      <x>0</x>
      <y>0</y>
      <width>481</width>
-     <height>27</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuGUI_demo">
