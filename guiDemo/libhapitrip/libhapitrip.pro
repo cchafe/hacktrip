@@ -13,6 +13,8 @@ win32 {
 # also see hapitrip.h for possible setting of flag
 DEFINES += USEBETA
 }
+# rtaudio submodule is 6.0.1, so USEBETA everywhere
+DEFINES += USEBETA
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
