@@ -16,6 +16,8 @@ SOURCES += \
     ../../regulator/regulator.cpp
 
 HEADERS += \
+    ../../regulator/WaitFreeFrameBuffer.h \
+    ../../regulator/WaitFreeRingBuffer.h \
     ../../regulator/regulator_global.h \
     ../../regulator/regulator.h
 

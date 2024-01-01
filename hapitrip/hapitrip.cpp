@@ -10,6 +10,13 @@
 #include <QThread>
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
+int gVerboseFlag = 0;
+
+void errorCallback( RtAudioErrorType /*type*/, const std::string &errorText )
+{
+    // This example error handling function simply outputs the error message to stderr.
+    if(gVerboseFlag == 2)    std::cerr << "\nerrorCallback: " << errorText << "\n\n";
+}
 
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef AUDIO_ONLY
@@ -150,22 +157,43 @@ void UDP::start() {
     mTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen]; // for when not using an audio callback
     memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
 
-    mReg = new Regulator(Hapitrip::as.channels,
-                         Hapitrip::as.bytesPerSample,
-                         Hapitrip::as.FPP,
-                         -3, // qlen needs to be param
-                         Hapitrip::as.usePLCthread, // bool sets thread or not thread
-                         Hapitrip::as.scale, Hapitrip::as.invScale,
-                         Hapitrip::as.verbose,
-                         Hapitrip::as.audioDataLen);
+    mReg4 = new Regulator(Hapitrip::as.channels,
+                          Hapitrip::as.bytesPerSample,
+                          Hapitrip::as.FPP,
+                          10, // qlen needs to be param
+                          //                          Hapitrip::as.sampleRate,
+                          //                          false, // = 4
+                          Hapitrip::as.scale, Hapitrip::as.invScale,
+                          Hapitrip::as.verbose,
+                          Hapitrip::as.audioDataLen);
+/*
+    mReg3 = new Regulator(Hapitrip::as.channels,
+                          Hapitrip::as.bytesPerSample,
+                          Hapitrip::as.FPP,
+                          0, // qlen needs to be param
+                          Hapitrip::as.sampleRate,
+                          true, // = 3
+                          Hapitrip::as.scale, Hapitrip::as.invScale,
+                          Hapitrip::as.verbose,
+                          Hapitrip::as.audioDataLen);
 
-    // always addd RegulatorThread even if unused
+    mReg4 = new Regulator(Hapitrip::as.channels,
+                          Hapitrip::as.bytesPerSample,
+                          Hapitrip::as.FPP,
+                          0, // qlen needs to be param
+                          Hapitrip::as.sampleRate,
+                          false, // = 4
+                          Hapitrip::as.scale, Hapitrip::as.invScale,
+                          Hapitrip::as.verbose,
+                          Hapitrip::as.audioDataLen);
+*/
+    // always add RegulatorThread even if unused
     // JackTrip is different, RegulatorThread only if bufstrategy 3, only settable at launch
     // HackTrip allows changes while running, so RegulatorThread needs to exist
-    if (true) {
+/*    if (true) {
         mRegulatorThreadPtr = new QThread();
         mRegulatorThreadPtr->setObjectName("RegulatorThread");
-        Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(mReg);
+        Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(mReg3);
         RegulatorWorker* workerPtr = new RegulatorWorker(regulatorPtr);
         workerPtr->moveToThread(mRegulatorThreadPtr);
         QObject::connect(this, &UDP::signalReceivedNetworkPacket, workerPtr,
@@ -173,7 +201,9 @@ void UDP::start() {
         mRegulatorThreadPtr->start();
         mRegulatorWorkerPtr = workerPtr;
     }
+*/
 };
+
 // example system commands that show udp port in use in case of trouble starting
 // sudo lsof -i:4464
 // sudo lsof -i -P -n
@@ -204,13 +234,15 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
 
 void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
 
-    //    mTest->sineTest((MY_TYPE *)buf);
+    // force sine
+       mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
 
 
-    if (Hapitrip::as.usePLC)
-        mReg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
-    else {
+    if (Hapitrip::as.usePLC) {
+        if (Hapitrip::as.usePLCthread) mReg3->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
+        else mReg4->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
+    } else {
         memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
         mWptr++;
         mWptr %= mRing;
@@ -222,19 +254,20 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
 // translates to ringBufferPull()
 
 void UDP::ringBufferPull() { // pull next packet to play out from regulator or ring
-    if (Hapitrip::as.usePLC) { // same as mBufferStrategy 3,4
-        mReg->readSlotNonBlocking(mTmpAudioBuf);
-        //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
-        if (mReg->mBufferStrategy == 3) { // use RegulatorThread
-            emit signalReceivedNetworkPacket();
-        }
+//    std::cout << "ringBufferPull ";
+    if (Hapitrip::as.usePLC) {
+        if (Hapitrip::as.usePLCthread) emit signalReceivedNetworkPacket();
+        else mReg4->readSlotNonBlocking(mTmpAudioBuf);
+//        if (Hapitrip::as.usePLCthread) std::cout << " == 3 "; else std::cout << " == 4 ";
     } else  { // simple version of mBufferStrategy 1,2
+//        std::cout << " == 1 ";
         if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;
         memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
         mRptr++; // advance to the next slot
     }
+//    std::cout << "\n";
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
@@ -314,12 +347,34 @@ void UDP::stop() { // the connection and close the socket
 }
 
 #ifndef NO_AUDIO
+bool UDP::exceedsCallbackInterval( double msPadding ) {
+    bool exceeds = false;
+    if (lastCallbackTime == 0.0) mCallbackTimer.start();
+    else {
+        double now = (double)mCallbackTimer.nsecsElapsed() / 1000000.0;
+        double delta = now - lastCallbackTime;
+        std::cout.setf(std::ios::showpoint);
+        std::cout   << std::setprecision(4) << std::setw(4);
+        std::cout   << delta
+                  << " (ms)   nominal = "
+                  << Hapitrip::as.packetPeriodMS
+                  << std::endl;
+        lastCallbackTime = now;
+        if ((delta - Hapitrip::as.packetPeriodMS) > msPadding) exceeds = true;
+    }
+    return exceeds;
+}
+
 int UDP::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio driver for audio transfers
                        unsigned int /* nBufferFrames */,
                        double /* streamTime */,
                        RtAudioStreamStatus /* status */,
                        void * /* data */) // last arg is used for "this"
 {
+    // if (exceedsCallbackInterval(0.25)) {
+    //     std::cout << "    that's how bad the previous callback exceeded \n";
+    // }
+    // else {
     send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
     ringBufferPull();
     memcpy(outputBuffer, mTmpAudioBuf, Hapitrip::as.audioDataLen);
@@ -327,7 +382,7 @@ int UDP::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio
     //    memcpy(outputBuffer, inputBuffer, Hapitrip::mAudioDataLen); // test
     //    straight wire mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
     //    mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
-
+    // }
     return 0;
 }
 
@@ -374,7 +429,8 @@ bool Audio::start() {
 
     // various RtAudio API's
 #ifdef USEBETA
-    m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI)); // reference by enum
+    m_adac = new RtAudio(RtAudio::Api(Hapitrip::as.rtAudioAPI), &errorCallback ); // reference by enum
+
 #else
     m_adac = new RtAudio(); // test with win10
 #endif

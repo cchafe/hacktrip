@@ -77,7 +77,8 @@ public:
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
 #endif
-    Regulator * mReg;
+    Regulator * mReg3; // bufstrategy 3, separate thread
+    Regulator * mReg4; // bufstrategy 4
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -103,9 +104,11 @@ private:
     QThread* mRegulatorThreadPtr;
     /// worker used to pull packets from Regulator (if mBufferStrategy==3)
     QObject* mRegulatorWorkerPtr;
+    double lastCallbackTime;
+    QElapsedTimer mCallbackTimer; // for rcvElapsedTime
+    bool exceedsCallbackInterval( double msPadding );
 signals:
     void signalReceivedNetworkPacket();
-
 };
 
 class TCP : public QTcpSocket {
@@ -147,6 +150,7 @@ private:
     RtAudio::StreamParameters m_oParams;
     RtAudio::StreamOptions options;
     TestAudio *mTest;
+
 #ifndef AUDIO_ONLY
     UDP *mUdp;
 #endif
@@ -157,8 +161,8 @@ class APIsettings {
     // default values
     static const int dRtAudioAPI = 0;
     static const int dSampleRate = 48000;
-    static const int dFPP = 256;
-    static const int dChannels = 2;
+    static const int dFPP = 128;
+    static const int dChannels = 1;
     static const int dBytesPerSample = sizeof(MY_TYPE);
     static const int dAudioDataLen = dFPP * dChannels * dBytesPerSample;
     constexpr static const double dScale = 32767.0;
@@ -251,7 +255,7 @@ public:
     void setUsePLCthread(int use) {
         as.usePLCthread = use;
         if (mUdp != nullptr)
-            mUdp->mReg->setUsePLCthread(use);
+            mUdp->mReg3->setUsePLCthread(use);
     }
 
 #ifndef AUDIO_ONLY

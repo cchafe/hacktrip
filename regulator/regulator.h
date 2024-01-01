@@ -1,75 +1,32 @@
-//*****************************************************************
-/*
-  JackTrip: A System for High-Quality Audio Network Performance
-  over the Internet
-
-  Copyright (c) 2021 Juan-Pablo Caceres, Chris Chafe.
-  SoundWIRE group at CCRMA, Stanford University.
-
-  Permission is hereby granted, free of charge, to any person
-  obtaining a copy of this software and associated documentation
-  files (the "Software"), to deal in the Software without
-  restriction, including without limitation the rights to use,
-  copy, modify, merge, publish, distribute, sublicense, and/or sell
-  copies of the Software, and to permit persons to whom the
-  Software is furnished to do so, subject to the following
-  conditions:
-
-  The above copyright notice and this permission notice shall be
-  included in all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-  OTHER DEALINGS IN THE SOFTWARE.
-*/
-//*****************************************************************
-// 2023
-
-/**
- * \file Regulator.h
- * \author Chris Chafe
- * \date May 2021
- */
-
-// Initial references and starter code to bring up Burg's recursion
-// http://www.emptyloop.com/technotes/A%20tutorial%20on%20Burg's%20method,%20algorithm%20and%20recursion.pdf
-// https://metacpan.org/source/SYP/Algorithm-Burg-0.001/README
-
-#ifndef __REGULATOR_H__
-#define __REGULATOR_H__
+#ifndef REGULATOR_H
+#define REGULATOR_H
+// 2022
 #include "regulator_global.h"
-
 #include <math.h>
-
 #include <QDebug>
 #include <QElapsedTimer>
-#include <atomic>
-#include <cstring>
+//#include <QMutex>
+//#include <QMutexLocker>
 
 typedef float sample_t; // from JackTrip
 
 class BurgAlgorithm
 {
-   public:
+public:
     bool classify(double d);
-    void train(std::vector<long double>& coeffs, const std::vector<float>& x);
-    void predict(std::vector<long double>& coeffs, std::vector<float>& tail);
+    void train(std::vector<double>& coeffs, const std::vector<float>& x);
+    void predict(std::vector<double>& coeffs, std::vector<float>& tail);
 
-   private:
+private:
     // the following are class members to minimize heap memory allocations
-    std::vector<long double> Ak;
-    std::vector<long double> f;
-    std::vector<long double> b;
+    std::vector<double> Ak;
+    std::vector<double> f;
+    std::vector<double> b;
 };
 
 class ChanData
 {
-   public:
+public:
     ChanData(int i, int FPP, int hist);
     int ch;
     int trainSamps;
@@ -77,7 +34,7 @@ class ChanData
     std::vector<sample_t> mTrain;
     std::vector<sample_t> mTail;
     std::vector<sample_t> mPrediction;  // ORDER
-    std::vector<long double> mCoeffs;
+    std::vector<double> mCoeffs;
     std::vector<sample_t> mXfadedPred;
     std::vector<sample_t> mLastPred;
     std::vector<std::vector<sample_t>> mLastPackets;
@@ -88,10 +45,10 @@ class ChanData
 
 class StdDev
 {
-   public:
+public:
     StdDev(int id, QElapsedTimer* timer, int w);
     void tick();
-    double calcAuto(double autoHeadroom, double localFPPdur, double peerFPPdur);
+    double calcAuto(double autoHeadroom, double localFPPdur);
     int mId;
     int plcOverruns;
     int plcUnderruns;
@@ -108,7 +65,7 @@ class StdDev
     double longTermMax;
     double longTermMaxAcc;
 
-   private:
+private:
     void reset();
     QElapsedTimer* mTimer;
     std::vector<double> data;
@@ -121,28 +78,21 @@ class StdDev
     int longTermCnt;
 };
 
+
 class REGULATOR_EXPORT Regulator  {
 public:
-    Regulator(int rcvChannels, int bit_res, int FPP, int qLen, int bufStrategy,
-// wasThisWayInJackTrip               int bqLen
-// notInJackTrip
-     double scale, double invScale, bool verbose, double audioDataLen);
-
-
-    // notInJackTrip
-void setUsePLCthread(int use);
-
+    Regulator(int rcvChannels, int bit_res, int FPP, int qLen, double scale, double invScale, bool verbose,
+              double audioDataLen);
     // wasThisWayInJackTrip     virtual
     ~Regulator();
-
-    void shimFPP(const int8_t* buf, int len, int seq_num);
-    void pushPacket(const int8_t* buf, int seq_num);
+    void setUsePLCthread(bool use){};
+    void shimFPP(int8_t* buf, int len, int seq_num);
+    void pushPacket(int8_t* buf, int seq_num);
     // can hijack unused2 to propagate incoming seq num if needed
     // option is in UdpDataProtocol
     // if (!mJackTrip->writeAudioBuffer(src, host_buf_size, last_seq_num))
     // instead of
     // if (!mJackTrip->writeAudioBuffer(src, host_buf_size, gap_size))
-
     // wasThisWayInJackTrip virtual
     /*
     bool insertSlotNonBlockingRegulator(const int8_t* ptrToSlot,
@@ -157,29 +107,13 @@ void setUsePLCthread(int use);
 
     void pullPacket(int8_t* buf);
 
-    void pullPacket();
-
-    virtual void readSlotNonBlocking(int8_t* ptrToReadSlot)
-    {
-        if (mBufferStrategy == 3) {  // PLC workerThread
-            ::memcpy(ptrToReadSlot, mNextPacket.load(std::memory_order_acquire), mBytes);
-        } else {  // mBufferStrategy == 4 compute in this thread
-            pullPacket(ptrToReadSlot);
-        }
-    }
-
-    // wasThisWayInJackTrip
-    /*
-    virtual void readBroadcastSlot(int8_t* ptrToReadSlot)
-    {
-        m_b_BroadcastRingBuffer->readBroadcastSlot(ptrToReadSlot);
-    }
-    */
+    // wasThisWayInJackTrip    virtual
+    void readSlotNonBlocking(int8_t* ptrToReadSlot) { pullPacket(ptrToReadSlot); }
 
     //    virtual QString getStats(uint32_t statCount, uint32_t lostCount);
     // wasThisWayInJackTrip    virtual bool getStats(IOStat* stat, bool reset);
 
-   private:
+private:
     void setFPPratio();
     bool mFPPratioIsSet;
     void processPacket(bool glitch);
@@ -193,11 +127,9 @@ void setUsePLCthread(int use);
     int mHist;
     // wasThisWayInJackTrip     AudioInterface::audioBitResolutionT mBitResolutionMode;
     BurgAlgorithm ba;
-    int mBytes;
+    // wasThisWayInJackTrip      int mBytes;
     int mBytesPeerPacket;
-    int8_t* mPullQueue;
     int8_t* mXfrBuffer;
-    std::atomic<const void*> mNextPacket;
     int8_t* mAssembledPacket;
     int mPacketCnt;
     sample_t bitsToSample(int ch, int frame);
@@ -227,48 +159,14 @@ void setUsePLCthread(int use);
     int mModSeqNumPeer;
     double mAutoHeadroom;
     double mFPPdurMsec;
-    double mPeerFPPdurMsec;
-// notInJackTrip -- private in JackTrip
-public:
-    int mBufferStrategy;
-private:
     void changeGlobal(double);
     void changeGlobal_2(int);
     void changeGlobal_3(int);
     void printParams();
-
-    // notInJackTrip
     double mScale;
     double mInvScale;
     bool mVerbose;
     int mAudioDataLen;
-
-    // wasThisWayInJackTrip
-    /// Pointer for the Broadcast RingBuffer
-    /*
-    RingBuffer* m_b_BroadcastRingBuffer;
-    int m_b_BroadcastQueueLength;
-    */
 };
 
-class REGULATOR_EXPORT RegulatorWorker : public QObject
-{
-    Q_OBJECT;
-
-   public:
-    RegulatorWorker(Regulator* rPtr) : mRegulatorPtr(rPtr) {}
-    virtual ~RegulatorWorker() {}
-
-   public slots:
-    void pullPacket()
-    {
-        if (mRegulatorPtr != nullptr) {
-            mRegulatorPtr->pullPacket();
-        }
-    }
-
-   private:
-    Regulator* mRegulatorPtr;
-};
-
-#endif  //__REGULATOR_H__
+#endif // REGULATOR_H

@@ -1,8 +1,9 @@
 TEMPLATE = subdirs
+CONFIG += ordered
 
 SUBDIRS += \
-    app   \
-    libhapitrip  \
     libregulator  \
-    librtaudio
+    librtaudio   \
+    libhapitrip  \
+    app
 
