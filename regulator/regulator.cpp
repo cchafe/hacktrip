@@ -442,7 +442,7 @@ sample_t Regulator::bitsToSample(int ch, int frame) {
 void Regulator::sampleToBits(sample_t sample, int ch, int frame)
 {
     MY_TYPE * tmp = (MY_TYPE *)mXfrBuffer;
-    MY_TYPE tmp1 = (MY_TYPE)(0 * mScale);
+    MY_TYPE tmp1 = (MY_TYPE)(sample * mScale);
     tmp[frame + ch * mFPP] = tmp1;
 }
 

@@ -19,7 +19,10 @@ void errorCallback( RtAudioErrorType /*type*/, const std::string &errorText )
 }
 
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
-#ifndef AUDIO_ONLY
+#ifdef AUDIO_ONLY
+    mAudio.setTest(as.channels);
+    return 1; // AUDIO_ONLY still needs connectToServer which needs to return non-zero
+#else
     as.server = server; // set the server
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
@@ -29,11 +32,11 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef NO_AUDIO
     mAudio.setUdp(mUdp);
 #endif
-#endif
 #ifndef NO_AUDIO
     mAudio.setTest(as.channels);
 #endif
     return mUdp->getPeerUdpPort();
+#endif
 }
 
 void Hapitrip::run() { // hit this before server times out in like 10 seconds
@@ -42,7 +45,9 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
 #endif
 #ifndef NO_AUDIO
     if (mAudio.start()) {
+#ifndef AUDIO_ONLY
         mUdp->stop();
+#endif
     }
 #endif
 }
@@ -235,7 +240,7 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
 void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
 
     // force sine
-       mTest->sineTest((MY_TYPE *)buf);
+       // mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
 
 
@@ -404,8 +409,8 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     // audio diagnostics, modify or print output and input buffers
     memcpy(outputBuffer, inputBuffer,
            Hapitrip::as.audioDataLen); // test straight wire
-    //        mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
-    //        mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
+    mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
+           // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
 
     return 0;
 }

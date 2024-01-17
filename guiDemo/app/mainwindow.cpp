@@ -67,12 +67,16 @@ void MainWindow::on_audioComboBox_currentIndexChanged(int arg1)
 
 void MainWindow::on_plcCheckBox_stateChanged(int arg1)
 {
+#ifndef AUDIO_ONLY
     ht->setUsePLC(arg1);
+#endif
 }
 
 void MainWindow::on_plcThreadCheckBox_stateChanged(int arg1)
 {
+#ifndef AUDIO_ONLY
     ht->setUsePLCthread(arg1);
+#endif
 }
 
 void MainWindow::updateStateFromUI() {
@@ -80,8 +84,10 @@ void MainWindow::updateStateFromUI() {
     ht->setFPP(ui->FPPcomboBox->currentText().toInt());
     ht->setChannels(ui->channelsSpinBox->value());
     ht->setSampleRate(ui->srateComboBox->currentText().toInt());
+#ifndef AUDIO_ONLY
     ht->setUsePLC(ui->plcCheckBox->checkState());
     ht->setUsePLCthread(ui->plcThreadCheckBox->checkState());
+#endif
 };
 
 

@@ -6,7 +6,7 @@
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
 
-//#define AUDIO_ONLY
+#define AUDIO_ONLY
 #ifdef AUDIO_ONLY
 #include "qobject.h"
 #include "qobjectdefs.h"
@@ -248,6 +248,7 @@ public:
     int getSampleRate() { return as.sampleRate; }
     void setSampleRate(int srate) { as.sampleRate = srate; }
 
+#ifndef AUDIO_ONLY
     int getUsePLC() { return as.usePLC; }
     void setUsePLC(int use) { as.usePLC = use; }
 
@@ -258,7 +259,6 @@ public:
             mUdp->mReg3->setUsePLCthread(use);
     }
 
-#ifndef AUDIO_ONLY
     int getLocalUDPaudioPort() { return as.localAudioUdpPort; };
     void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; };
 #endif
