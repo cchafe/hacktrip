@@ -3,6 +3,8 @@
 
 #include "hapitrip_global.h"
 
+using namespace std; // for vector for TestPLC burg
+
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
 
@@ -44,9 +46,33 @@ private:
 class TestPLC : public TestAudio { // for insertion in test points
 public:
     TestPLC(int channels);
-    void straightWire(MY_TYPE *out, MY_TYPE *in); // generate a signal
+    void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
+    void burg(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
+    int audioCallback(void *outputBuffer, void *inputBuffer,
+                      unsigned int nBufferFrames, double streamTime,
+                      RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
 private:
     int pCnt;
+    BurgAlgorithm ba;
+    int fpp;
+    int packetsInThePast;
+    int upToNow; // duration
+    int beyondNow; // duration
+
+    vector<double> mFadeUp;
+    vector<double> mFadeDown;
+    vector<double> predictedNowPacket;
+    vector<double> realNowPacket;
+    vector<double> outputNowPacket;
+    vector<double> futurePredictedPacket;
+    vector<float> realPast;
+    vector<vector<float>> predictedPast;
+    vector<double> coeffs;
+    vector<float> prediction;
+    bool lastWasGlitch;
+
+    vector<float> mTmpAudioBufIn; // one bufferfull of audio, used for rcv and send operations
+    vector<float> mTmpAudioBufOut; // one bufferfull of audio, used for rcv and send operations
 };
 
 #ifndef AUDIO_ONLY

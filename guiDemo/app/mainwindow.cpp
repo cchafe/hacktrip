@@ -36,6 +36,7 @@ void MainWindow::on_stopButton_clicked() {
   if (connected) {
     ht->stop();
   }
+
   delete ht;
   ht = nullptr;
 //  this->close();
