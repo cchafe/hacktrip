@@ -41,6 +41,14 @@ private:
     std::vector<double> mPhasor; // multi-channel capable
 };
 
+class TestPLC : public TestAudio { // for insertion in test points
+public:
+    TestPLC(int channels);
+    void straightWire(MY_TYPE *out, MY_TYPE *in); // generate a signal
+private:
+    int pCnt;
+};
+
 #ifndef AUDIO_ONLY
 struct HeaderStruct { // standard JackTrip network packet header
 public:
@@ -132,7 +140,10 @@ public:
 #ifndef AUDIO_ONLY
     void setUdp(UDP *udp) { mUdp = udp; }
 #endif
-    void setTest(int channels) { mTest = new TestAudio(channels); }
+    void setTest(int channels) {
+        mTest = new TestAudio(channels);
+        mTestPLC = new TestPLC(channels);
+    }
 
 private:
     // these are identical to the rtaudio/tests/Duplex.cpp example
@@ -150,6 +161,7 @@ private:
     RtAudio::StreamParameters m_oParams;
     RtAudio::StreamOptions options;
     TestAudio *mTest;
+    TestPLC *mTestPLC;
 
 #ifndef AUDIO_ONLY
     UDP *mUdp;
@@ -218,6 +230,7 @@ private:
 #endif
     friend class Audio;
     friend class TestAudio;
+    friend class TestPLC;
     friend class Hapitrip;
 };
 
@@ -267,6 +280,7 @@ private:
     static APIsettings as; // all API parameters
     friend class Audio;
     friend class TestAudio;
+    friend class TestPLC;
 #ifndef AUDIO_ONLY
     friend class TCP;
     friend class UDP;

@@ -409,7 +409,9 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     // audio diagnostics, modify or print output and input buffers
     memcpy(outputBuffer, inputBuffer,
            Hapitrip::as.audioDataLen); // test straight wire
-    mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
+    // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
+    mTest->sineTest((MY_TYPE *)inputBuffer); // output sines
+    mTestPLC->straightWire((MY_TYPE *)outputBuffer,(MY_TYPE *)inputBuffer);
            // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
 
     return 0;
@@ -584,5 +586,18 @@ void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert 
             double tmp = ((MY_TYPE)*buffer++) * Hapitrip::as.invScale;
             std::cout << "\t" << tmp << std::endl;
         }
+    }
+}
+
+TestPLC::TestPLC(int channels) : TestAudio (channels) { pCnt = 0; }
+
+void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in) { // generate next bufferfull and convert to short int
+    for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
+        for (int i = 0; i < Hapitrip::as.FPP; i++) {
+            double tmpIn = ((MY_TYPE)*in++) * Hapitrip::as.invScale;
+            double tmpOut = (!(pCnt%80)) ? 0.0 : tmpIn;
+            *out++ = (MY_TYPE)(tmpOut * Hapitrip::as.scale);
+        }
+        pCnt++;
     }
 }
