@@ -581,6 +581,7 @@ void TestAudio::sineTest(MY_TYPE *buffer) { // generate next bufferfull and conv
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         for (int i = 0; i < Hapitrip::as.FPP; i++) {
             double tmp = sin(mPhasor[ch]);
+            tmp *= 0.1;
             *buffer++ = (MY_TYPE)(tmp * Hapitrip::as.scale);
             mPhasor[ch] += ((ch) ? 0.20 : 0.22);
         }
