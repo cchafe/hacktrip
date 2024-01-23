@@ -10,7 +10,7 @@
 
 typedef float sample_t; // from JackTrip
 
-class BurgAlgorithm
+class BurgAlgorithmX
 {
 public:
     bool classify(double d);
@@ -126,7 +126,7 @@ private:
     int mNumSlots;
     int mHist;
     // wasThisWayInJackTrip     AudioInterface::audioBitResolutionT mBitResolutionMode;
-    BurgAlgorithm ba;
+    BurgAlgorithmX ba;
     // wasThisWayInJackTrip      int mBytes;
     int mBytesPeerPacket;
     int8_t* mXfrBuffer;

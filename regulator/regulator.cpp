@@ -446,7 +446,7 @@ void Regulator::sampleToBits(sample_t sample, int ch, int frame)
     tmp[frame + ch * mFPP] = tmp1;
 }
 
-bool BurgAlgorithm::classify(double d)
+bool BurgAlgorithmX::classify(double d)
 {
     bool tmp = false;
     switch (fpclassify(d)) {
@@ -473,7 +473,7 @@ bool BurgAlgorithm::classify(double d)
     return tmp;
 }
 
-void BurgAlgorithm::train(std::vector<double>& coeffs, const std::vector<float>& x)
+void BurgAlgorithmX::train(std::vector<double>& coeffs, const std::vector<float>& x)
 {
     // GET SIZE FROM INPUT VECTORS
     size_t N = x.size() - 1;
@@ -549,7 +549,7 @@ void BurgAlgorithm::train(std::vector<double>& coeffs, const std::vector<float>&
     coeffs.assign(++Ak.begin(), Ak.end());
 }
 
-void BurgAlgorithm::predict(std::vector<double>& coeffs, std::vector<float>& tail)
+void BurgAlgorithmX::predict(std::vector<double>& coeffs, std::vector<float>& tail)
 {
     size_t m = coeffs.size();
     //    qDebug() << "tail.at(0)" << tail[0]*32768;

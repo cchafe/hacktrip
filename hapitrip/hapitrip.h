@@ -2,6 +2,7 @@
 #define HAPITRIP_H
 
 #include "hapitrip_global.h"
+#include "../guiDemo/app/burgalgorithm.h"
 
 using namespace std; // for vector for TestPLC burg
 
