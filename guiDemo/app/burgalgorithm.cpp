@@ -133,6 +133,7 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, int pCnt,
     }
     // ASSIGN COEFFICIENTS
     coeffs.assign( ++Ak.begin(), Ak.end() );
+    // or just coeffs = Ak;
 
     //    return $self->_set_coefficients([ @Ak[1 .. $#Ak] ]);
 

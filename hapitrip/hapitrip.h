@@ -48,10 +48,14 @@ class TestPLC : public TestAudio { // for insertion in test points
 public:
     TestPLC(int channels);
     void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
-    void burg(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
+    void burg(bool glitch); // generate a signal
     int audioCallback(void *outputBuffer, void *inputBuffer,
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
+    void toFloatBuf(MY_TYPE *in);
+    void fromFloatBuf(MY_TYPE *out);
+    void ringBufferPush();
+    void ringBufferPull(int past);
 private:
     int pCnt;
     BurgAlgorithm ba;
@@ -60,20 +64,22 @@ private:
     int upToNow; // duration
     int beyondNow; // duration
 
-    vector<double> mFadeUp;
-    vector<double> mFadeDown;
-    vector<double> predictedNowPacket;
-    vector<double> realNowPacket;
-    vector<double> outputNowPacket;
-    vector<double> futurePredictedPacket;
+    vector<float> mFadeUp;
+    vector<float> mFadeDown;
+    vector<float> predictedNowPacket;
+    vector<float> realNowPacket;
+    vector<float> outputNowPacket;
+    vector<float> futurePredictedPacket;
     vector<float> realPast;
     vector<vector<float>> predictedPast;
     vector<double> coeffs;
     vector<float> prediction;
     bool lastWasGlitch;
-
-    vector<float> mTmpAudioBufIn; // one bufferfull of audio, used for rcv and send operations
-    vector<float> mTmpAudioBufOut; // one bufferfull of audio, used for rcv and send operations
+    vector<vector<float>> mPacketRing;
+    int mWptr;
+    int mRing;
+    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
+    vector<float> mZeros;
 };
 
 #ifndef AUDIO_ONLY
@@ -88,7 +94,7 @@ public:
     uint8_t NumIncomingChannelsFromNet; ///< Number of incoming Channels from the
     ///< network
     uint8_t
-    NumOutgoingChannelsToNet; ///< Number of outgoing Channels to the network
+        NumOutgoingChannelsToNet; ///< Number of outgoing Channels to the network
 };
 
 class UDP : public QUdpSocket  { // UDP socket for send and receive
@@ -212,11 +218,11 @@ class APIsettings {
     static const int dLocalAudioUdpPort = 4464;
     static const int dSocketWaitMs = 1500;
     static const int dBufferQueueLength =
-            3; // queue not used for localhost testing
+        3; // queue not used for localhost testing
     static const int dExitPacketSize = 63;
     static const int dTimeoutMS = 1000;
     constexpr static const double dPacketPeriodMS =
-            (1000.0 / (double)(dSampleRate / dFPP));
+        (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
