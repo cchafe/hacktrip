@@ -673,7 +673,7 @@ void TestPLC::burg(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bu
         }
 
         for (int i = 0; i < Hapitrip::as.FPP; i++) {
-            double tmpIn = ((MY_TYPE)*in++) * Hapitrip::as.invScale;
+            ringBufferPush(mTmpAudioBufIn);
             mTmpAudioBufOut[i] = mTmpAudioBufIn[i];
         }
 
