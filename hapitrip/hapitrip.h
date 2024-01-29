@@ -48,7 +48,7 @@ class TestPLC : public TestAudio { // for insertion in test points
 public:
     TestPLC(int channels);
     void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
-    void burg(bool glitch); // generate a signal
+    void burg(bool glitch, bool primed); // generate a signal
     int audioCallback(void *outputBuffer, void *inputBuffer,
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
@@ -80,6 +80,8 @@ private:
     int mRing;
     vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
     vector<float> mZeros;
+    vector<float> fakeNow;
+    double fakeNowPhasor;
 };
 
 #ifndef AUDIO_ONLY

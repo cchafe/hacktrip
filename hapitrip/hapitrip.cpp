@@ -583,7 +583,7 @@ void TestAudio::sineTest(MY_TYPE *buffer) { // generate next bufferfull and conv
             double tmp = sin(mPhasor[ch]);
             tmp *= 0.1;
             *buffer++ = (MY_TYPE)(tmp * Hapitrip::as.scale);
-            mPhasor[ch] += ((ch) ? 0.20 : 0.22);
+            mPhasor[ch] += ((ch) ? 0.2 : 0.22);
         }
     }
 }
@@ -628,7 +628,7 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
     // straightWire((MY_TYPE *)outputBuffer,(MY_TYPE *)inputBuffer,(!(pCnt%80)));
     sineTest((MY_TYPE *)inputBuffer); // output sines
     toFloatBuf((MY_TYPE *)inputBuffer);
-    burg( (!(pCnt%80)) );
+    burg( (!(pCnt%80)), (pCnt > packetsInThePast) );
     fromFloatBuf((MY_TYPE *)outputBuffer);
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
     pCnt++;
@@ -661,6 +661,7 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
             mTmpFloatBuf[i] = mZeros[i] = 0.0;
 
     realPast.resize( upToNow );
+    for (int i = 0; i < upToNow; i++) realPast[i] = 0.0;
     for (int i = 0; i < packetsInThePast + 1; i++) {
         vector<float> tmp(fpp);
         for (int j = 0; j < fpp; j++) tmp[j] = 0.0;
@@ -670,6 +671,14 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
         vector<float> tmp(fpp);
         for (int j = 0; j < fpp; j++) tmp[j] = 0.0;
         predictedPast.push_back(tmp);
+    }
+    coeffs.resize( upToNow - 1 );
+    for (int i = 0; i < upToNow - 1; i++) {
+        coeffs[i] = 0.0;
+    }
+    prediction.resize( coeffs.size() + fpp * 2 );
+    for (int i = 0; i < coeffs.size() + fpp * 2; i++) {
+        prediction[i] = 0.0;
     }
     lastWasGlitch = false;
     // setup ring buffer
@@ -682,29 +691,91 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
         for (int j = 0; j < fpp; j++) tmp[j] = 0.0;
         mPacketRing.push_back(tmp);
     }
+    fakeNow.resize( fpp );
+    fakeNowPhasor = 0.0;
+    for (int i = 0; i < fpp; i++) {
+        double tmp = sin(fakeNowPhasor);
+        tmp *= 0.1;
+        fakeNow[i] = tmp;
+        fakeNowPhasor += 0.22;
+    }
+
 }
 
-void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
+void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and convert to short int
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         //////////////////////////////////////
 
-        ringBufferPush();
-        realNowPacket = mTmpFloatBuf;
-        ringBufferPull(0);
+        // ringBufferPush();
+        for (int i = 0; i < fpp; i++) {
+            double tmp = sin(fakeNowPhasor);
+            tmp *= 0.1;
+            fakeNow[i] = tmp;
+            fakeNowPhasor += 0.22;
+        }
+        for ( int s = 0; s < fpp; s++ ) realNowPacket[s] = (!glitch) ? fakeNow[s] : 0.0;
+        // keep history of generated signal
+        if (!glitch) {
+            for ( int s = 0; s < fpp; s++ ) mTmpFloatBuf[s] = realNowPacket[s];
+            ringBufferPush();
+        }
+
+        if (primed) {
+            int offset = 0;
+            for ( int i = 0; i < packetsInThePast; i++ ) {
+                ringBufferPull(packetsInThePast - i);
+                for ( int s = 0; s < fpp; s++ )  realPast[s + offset] = mTmpFloatBuf[s];
+                offset += fpp;
+            }
+        }
+
+        if (glitch) {
+            for ( int s = 0; s < upToNow; s++ ) prediction[s] =
+                    predictedPast[s/fpp][s%fpp];
+            ba.train( coeffs,
+                     // fakePast
+                     (lastWasGlitch) ? prediction : realPast
+                     , pCnt, upToNow );
+            ba.predict( coeffs, prediction );
+            // if (pCnt < 200) for ( int s = 0; s < 3; s++ )
+            //         cout << pCnt << "\t" << s << "---"
+            //              << prediction[s+upToNow] << " \t"
+            //              << coeffs[s] << " \n";
+            for ( int s = 0; s < fpp; s++ ) predictedNowPacket[s] =
+                    prediction[upToNow + s];
+        }
+
+        for ( int s = 0; s < fpp; s++ ) mTmpFloatBuf[s] = outputNowPacket[s] =
+                ((glitch) ?
+                     ( (pCnt < packetsInThePast) ? 0.0 : predictedNowPacket[s] )
+                          :
+                     ( (lastWasGlitch) ?
+                          ( mFadeDown[s] * futurePredictedPacket[s] + mFadeUp[s] * realNowPacket[s] )
+                                      : realNowPacket[s] ));
+        // for ( int s = 0; s < fpp; s++ ) OUT(0,s) = coeffs[s];
+        lastWasGlitch = glitch;
+
+        for ( int i = 0; i < packetsInThePast - 2; i++ ) {
+            for ( int s = 0; s < fpp; s++ ) predictedPast[i][s] =
+                    predictedPast[i + 1][s];
+        }
+        for ( int s = 0; s < fpp; s++ ) predictedPast[packetsInThePast - 1][s] =
+                outputNowPacket[s];
+
+         for ( int s = 0; s < fpp; s++ ) futurePredictedPacket[s] =
+                prediction[beyondNow + s];
         //////////////////////////////////////
 
     }
 }
 
-void TestPLC::ringBufferPull(int past) { // push received packet to ring
+void TestPLC::ringBufferPull(int past) { // pull numbered packet from ring
     bool priming = ((pCnt - past) < 0);
-    int pastPtr = mWptr - past;
-    if (pastPtr < 0) pastPtr += mRing;
-    for ( int i = 0; i < past; i++ ) {
-        int tmp = pastPtr + i;
-        if (tmp > (mRing - 1)) tmp -= mRing;
-        mTmpFloatBuf = (!priming) ? mPacketRing[tmp] : mZeros;
-    }
+    if (!priming) {
+         int pastPtr = mWptr - past;
+         if (pastPtr < 0) pastPtr += mRing;
+         mTmpFloatBuf = mPacketRing[pastPtr];
+    } else cout << "ring buffer not primed\n";
 }
 
 void TestPLC::ringBufferPush() { // push received packet to ring
