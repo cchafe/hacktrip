@@ -628,7 +628,7 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
     // straightWire((MY_TYPE *)outputBuffer,(MY_TYPE *)inputBuffer,(!(pCnt%80)));
     sineTest((MY_TYPE *)inputBuffer); // output sines
     toFloatBuf((MY_TYPE *)inputBuffer);
-    burg( (!(pCnt%80)), (pCnt > packetsInThePast) );
+    burg( (!(pCnt%3)), (pCnt > packetsInThePast) );
     fromFloatBuf((MY_TYPE *)outputBuffer);
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
     pCnt++;
@@ -706,14 +706,15 @@ void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and c
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         //////////////////////////////////////
 
-        // ringBufferPush();
         for (int i = 0; i < fpp; i++) {
             double tmp = sin(fakeNowPhasor);
             tmp *= 0.1;
             fakeNow[i] = tmp;
             fakeNowPhasor += 0.22;
         }
-        for ( int s = 0; s < fpp; s++ ) realNowPacket[s] = (!glitch) ? fakeNow[s] : 0.0;
+
+        for ( int s = 0; s < fpp; s++ ) realNowPacket[s] = (!glitch) ? mTmpFloatBuf[s] : 0.0;
+        // for ( int s = 0; s < fpp; s++ ) realNowPacket[s] = (!glitch) ? fakeNow[s] : 0.0;
         // keep history of generated signal
         if (!glitch) {
             for ( int s = 0; s < fpp; s++ ) mTmpFloatBuf[s] = realNowPacket[s];
