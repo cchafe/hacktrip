@@ -626,9 +626,9 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
     // send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
     // ringBufferPull();
     // straightWire((MY_TYPE *)outputBuffer,(MY_TYPE *)inputBuffer,(!(pCnt%80)));
-    sineTest((MY_TYPE *)inputBuffer); // output sines
+    // sineTest((MY_TYPE *)inputBuffer); // output sines
     toFloatBuf((MY_TYPE *)inputBuffer);
-    burg( (!(pCnt%3)), (pCnt > packetsInThePast) );
+    burg( (!(pCnt%30)), (pCnt > packetsInThePast) );
     fromFloatBuf((MY_TYPE *)outputBuffer);
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
     pCnt++;
@@ -639,7 +639,7 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
     pCnt = 0;
     //////////////////////////////////////
     fpp = Hapitrip::as.FPP;
-    packetsInThePast = 2;
+    packetsInThePast = 5;
     upToNow = packetsInThePast * fpp; // duration
     beyondNow = (packetsInThePast + 1) * fpp; // duration
     mFadeUp.resize( fpp );
