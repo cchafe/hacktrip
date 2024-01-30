@@ -628,7 +628,14 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
     // straightWire((MY_TYPE *)outputBuffer,(MY_TYPE *)inputBuffer,(!(pCnt%80)));
     // sineTest((MY_TYPE *)inputBuffer); // output sines
     toFloatBuf((MY_TYPE *)inputBuffer);
-    burg( (!(pCnt%30)), (pCnt > packetsInThePast) );
+
+    bool glitch = !(pCnt%15);
+    // QThread::usleep(1000);
+    if (glitch) time->trigger();
+    burg( glitch, (pCnt > packetsInThePast) );
+    if (glitch) time->collect();
+    if (!(pCnt%300)) std::cout << "avg " << time->avg() << " \n";
+
     fromFloatBuf((MY_TYPE *)outputBuffer);
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
     pCnt++;
@@ -637,9 +644,11 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
 
 TestPLC::TestPLC(int channels) : TestAudio (channels) {
     pCnt = 0;
+    time = new Time();
+    time->start();
     //////////////////////////////////////
     fpp = Hapitrip::as.FPP;
-    packetsInThePast = 5;
+    packetsInThePast = 2;
     upToNow = packetsInThePast * fpp; // duration
     beyondNow = (packetsInThePast + 1) * fpp; // duration
     mFadeUp.resize( fpp );

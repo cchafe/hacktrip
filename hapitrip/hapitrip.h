@@ -16,6 +16,7 @@ using namespace std; // for vector for TestPLC burg
 #endif
 
 #include "../regulator/regulator.h"
+#include <QElapsedTimer>
 
 #ifndef NO_AUDIO
 //#include <RtAudio.h> // if built from a hapitrip.pro and it's likelt inclusion of rtaudio.pri
@@ -42,6 +43,22 @@ public:
     void sineTest(MY_TYPE *buffer); // generate a signal
 private:
     std::vector<double> mPhasor; // multi-channel capable
+};
+
+class Time {
+    double accum = 0.0;
+    int cnt = 0;
+    double tmpTime = 0.0;
+public:
+    QElapsedTimer mCallbackTimer; // for rcvElapsedTime
+    void collect( ){
+        double tmp = (mCallbackTimer.nsecsElapsed() - tmpTime) / 1000000.0;
+        accum += tmp;
+        cnt++;
+    }
+    double avg() { double tmp = accum / (double)cnt; accum = 0.0; cnt = 0; return tmp; }
+    void start() { mCallbackTimer.start(); }
+    void trigger() { tmpTime = mCallbackTimer.nsecsElapsed(); }
 };
 
 class TestPLC : public TestAudio { // for insertion in test points
@@ -82,6 +99,7 @@ private:
     vector<float> mZeros;
     vector<float> fakeNow;
     double fakeNowPhasor;
+    Time * time;
 };
 
 #ifndef AUDIO_ONLY
