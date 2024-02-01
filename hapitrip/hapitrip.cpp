@@ -629,10 +629,11 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
     // sineTest((MY_TYPE *)inputBuffer); // output sines
     toFloatBuf((MY_TYPE *)inputBuffer);
 
-    bool glitch = !(pCnt%15);
+    bool glitch = !(pCnt%30);
     // QThread::usleep(1000);
     if (glitch) time->trigger();
-    burg( glitch, (pCnt > packetsInThePast) );
+    // burg( glitch, (pCnt > packetsInThePast) );
+    if (glitch) mTmpFloatBuf = mZeros;
     if (glitch) time->collect();
     if (!(pCnt%300)) std::cout << "avg " << time->avg() << " \n";
 
