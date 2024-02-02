@@ -8,8 +8,8 @@ using namespace std;
 class BurgAlgorithm
 {
 public:
-    BurgAlgorithm(vector<DBL> &coeffs, int size);
-    void train(vector<DBL> &coeffs, const vector<float> &x, int pCnt, int size);
+    BurgAlgorithm(vector<DBL> &coeffs, size_t size);
+    void train(vector<DBL> &coeffs, const vector<float> &x, int pCnt, size_t size);
     void predict( vector<DBL> &coeffs, vector<float> &predicted );
 private:
     size_t m;

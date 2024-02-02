@@ -687,7 +687,7 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
         coeffs[i] = 0.0;
     }
     prediction.resize( coeffs.size() + fpp * 2 );
-    for (int i = 0; i < coeffs.size() + fpp * 2; i++) {
+    for (size_t i = 0; i < coeffs.size() + fpp * 2; i++) {
         prediction[i] = 0.0;
     }
     lastWasGlitch = false;
