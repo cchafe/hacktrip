@@ -60,7 +60,7 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, int pCnt,
     // INITIALIZE f and b
     for ( size_t i = 0; i < size; i++ )
         f[i] = b[i] = x[i];
-    // f = b = x;
+
     // INITIALIZE Dk
     DBL Dk = 0.0; // was double
     for ( size_t j = 0; j <= N; j++ )
