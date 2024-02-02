@@ -75,7 +75,7 @@ public:
     void ringBufferPull(int past);
 private:
     int pCnt;
-    BurgAlgorithm ba;
+    BurgAlgorithm *ba;
     int fpp;
     int packetsInThePast;
     int upToNow; // duration

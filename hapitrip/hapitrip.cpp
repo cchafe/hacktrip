@@ -632,8 +632,8 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
     bool glitch = !(pCnt%30);
     // QThread::usleep(1000);
     if (glitch) time->trigger();
-    // burg( glitch, (pCnt > packetsInThePast) );
-    if (glitch) mTmpFloatBuf = mZeros;
+    burg( glitch, (pCnt > packetsInThePast) );
+    // if (glitch) mTmpFloatBuf = mZeros;
     if (glitch) time->collect();
     if (!(pCnt%300)) std::cout << "avg " << time->avg() << " \n";
 
@@ -647,6 +647,7 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
     pCnt = 0;
     time = new Time();
     time->start();
+    ba = new BurgAlgorithm();
     //////////////////////////////////////
     fpp = Hapitrip::as.FPP;
     packetsInThePast = 2;
@@ -743,11 +744,11 @@ void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and c
         if (glitch) {
             for ( int s = 0; s < upToNow; s++ ) prediction[s] =
                     predictedPast[s/fpp][s%fpp];
-            ba.train( coeffs,
+            ba->train( coeffs,
                      // fakePast
                      (lastWasGlitch) ? prediction : realPast
                      , pCnt, upToNow );
-            ba.predict( coeffs, prediction );
+            ba->predict( coeffs, prediction );
             // if (pCnt < 200) for ( int s = 0; s < 3; s++ )
             //         cout << pCnt << "\t" << s << "---"
             //              << prediction[s+upToNow] << " \t"
