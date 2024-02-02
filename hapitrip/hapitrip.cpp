@@ -647,7 +647,6 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
     pCnt = 0;
     time = new Time();
     time->start();
-    ba = new BurgAlgorithm();
     //////////////////////////////////////
     fpp = Hapitrip::as.FPP;
     packetsInThePast = 2;
@@ -710,7 +709,7 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
         fakeNow[i] = tmp;
         fakeNowPhasor += 0.22;
     }
-
+    ba = new BurgAlgorithm(coeffs, upToNow);
 }
 
 void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and convert to short int

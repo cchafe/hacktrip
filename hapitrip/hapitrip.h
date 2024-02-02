@@ -89,7 +89,7 @@ private:
     vector<float> futurePredictedPacket;
     vector<float> realPast;
     vector<vector<float>> predictedPast;
-    vector<double> coeffs;
+    vector<float> coeffs;
     vector<float> prediction;
     bool lastWasGlitch;
     vector<vector<float>> mPacketRing;

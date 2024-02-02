@@ -28,8 +28,22 @@ bool classify(double d)
     return tmp;
 }
 
-BurgAlgorithm::BurgAlgorithm()
+BurgAlgorithm::BurgAlgorithm(vector<DBL> &coeffs, int size)
 {
+    // GET SIZE FROM INPUT VECTORS
+    m = coeffs.size();
+    N = size - 1;
+    this->size = size;
+    if (size < m)
+        qDebug() << "time_series should have more elements than the AR order is";
+    Ak.resize( m + 1 );
+    for (int i = 0; i < m + 1; i++)
+        Ak[i] = 0.0;
+    AkReset.resize( m + 1 );
+    AkReset = Ak;
+    AkReset[ 0 ] = 1.0;
+    f.resize(size);
+    b.resize(size);
 
 }
 
@@ -37,25 +51,15 @@ BurgAlgorithm::BurgAlgorithm()
 void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, int pCnt, int size )
 {
 
-    // GET SIZE FROM INPUT VECTORS
-    size_t N = size - 1;
-    size_t m = coeffs.size();
 
     ////
-    if (size < m)
-        qDebug() << "time_series should have more elements than the AR order is";
 
     // INITIALIZE Ak
-    vector<DBL> Ak( m + 1, 0.0 );
-    Ak[ 0 ] = 1.0;
+    Ak = AkReset;
 
     // INITIALIZE f and b
-    vector<DBL> f; // was double
-    f.resize(size);
-    for ( int i = 0; i < size; i++ ) f[i] = x[i];
-    //    vector<DBL> f( ldx );
-    vector<DBL> b( f ); // was double
-
+    for ( int i = 0; i < size; i++ )
+        f[i] = b[i] = x[i];
     // INITIALIZE Dk
     DBL Dk = 0.0; // was double
     for ( size_t j = 0; j <= N; j++ )
@@ -145,7 +149,6 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, int pCnt,
 
 void BurgAlgorithm::predict( vector<DBL> &coeffs, vector<float> &tail )
 {
-    size_t m = coeffs.size();
     //    qDebug() << "tail.at(0)" << tail[0]*32768;
     //    qDebug() << "tail.at(1)" << tail[1]*32768;
     // tail.resize(m+tail.size()); size it in main instead
