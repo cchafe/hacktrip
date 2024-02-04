@@ -700,8 +700,7 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     }
     lastWasGlitch = false;
     // setup ring buffer
-    int ringBufferLength = packetsInThePast + 1;
-    mRing = ringBufferLength;
+    mRing = packetsInThePast;
     mWptr = mRing / 2;
     // mRptr = mWptr - 2;
     for (int i = 0; i < mRing; i++) {
