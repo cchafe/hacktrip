@@ -61,22 +61,26 @@ public:
     void trigger() { tmpTime = mCallbackTimer.nsecsElapsed(); }
 };
 
-class TestPLC : public TestAudio { // for insertion in test points
+class TestPLC { // for insertion in test points
 public:
-    TestPLC(int channels);
-    void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
-    void burg(bool glitch, bool primed); // generate a signal
+    TestPLC(int chans, int fpp, int bps, int packetsInThePast);
     int audioCallback(void *outputBuffer, void *inputBuffer,
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
+    void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
+    void burg(bool glitch, bool primed); // generate a signal
     void toFloatBuf(MY_TYPE *in);
     void fromFloatBuf(MY_TYPE *out);
+    int mPcnt;
+    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
+    vector<float> mZeros;
+private:
     void ringBufferPush();
     void ringBufferPull(int past);
-private:
-    int pCnt;
     BurgAlgorithm *ba;
+    int channels;
     int fpp;
+    int bps;
     int packetsInThePast;
     int upToNow; // duration
     int beyondNow; // duration
@@ -95,11 +99,11 @@ private:
     vector<vector<float>> mPacketRing;
     int mWptr;
     int mRing;
-    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
-    vector<float> mZeros;
     vector<float> fakeNow;
     double fakeNowPhasor;
     Time * time;
+    float scale;
+    float invScale;
 };
 
 #ifndef AUDIO_ONLY
@@ -195,7 +199,10 @@ public:
 #endif
     void setTest(int channels) {
         mTest = new TestAudio(channels);
-        mTestPLC = new TestPLC(channels);
+    }
+    void setTestPLC(int channels, int fpp, int bps, int packetsInThePast) {
+        mTestPLC = new TestPLC(channels, fpp,
+                               bps, packetsInThePast);
     }
 
 private:

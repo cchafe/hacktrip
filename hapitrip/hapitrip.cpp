@@ -21,6 +21,8 @@ void errorCallback( RtAudioErrorType /*type*/, const std::string &errorText )
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifdef AUDIO_ONLY
     mAudio.setTest(as.channels);
+    mAudio.setTestPLC(as.channels,
+                      as.FPP, 16, 2);
     return 1; // AUDIO_ONLY still needs connectToServer which needs to return non-zero
 #else
     as.server = server; // set the server
@@ -428,6 +430,7 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim
 #endif
 
 #ifndef NO_AUDIO
+
 bool Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds -- (unused) from RtAudio examples/duplex
     m_streamTimePrintTime = 1.0;      // seconds -- (unused) from RtAudio examples/duplex
@@ -629,26 +632,31 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
     // sineTest((MY_TYPE *)inputBuffer); // output sines
     toFloatBuf((MY_TYPE *)inputBuffer);
 
-    bool glitch = !(pCnt%30);
+    bool glitch = !(mPcnt%30);
     // QThread::usleep(1000);
     if (glitch) time->trigger();
-    burg( glitch, (pCnt > packetsInThePast) );
+    burg( glitch, (mPcnt > packetsInThePast) );
     // if (glitch) mTmpFloatBuf = mZeros;
     if (glitch) time->collect();
-    if (!(pCnt%300)) std::cout << "avg " << time->avg() << " \n";
+    if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
 
     fromFloatBuf((MY_TYPE *)outputBuffer);
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
-    pCnt++;
+    mPcnt++;
     return 0;
 }
 
-TestPLC::TestPLC(int channels) : TestAudio (channels) {
-    pCnt = 0;
+TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
+    : channels(chans), fpp(fpp), bps(bps), packetsInThePast(packetsInThePast)
+{
+    mPcnt = 0;
     time = new Time();
     time->start();
+    if (bps == 16) {
+        scale = 32767.0;
+        invScale = 1.0 / 32767.0;
+    } else cout << "bps != 16 -- add code\n";
     //////////////////////////////////////
-    fpp = Hapitrip::as.FPP;
     packetsInThePast = 2;
     upToNow = packetsInThePast * fpp; // duration
     beyondNow = (packetsInThePast + 1) * fpp; // duration
@@ -713,8 +721,9 @@ TestPLC::TestPLC(int channels) : TestAudio (channels) {
 }
 
 void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and convert to short int
-    for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
+    for (int ch = 0; ch < channels; ch++) {
         //////////////////////////////////////
+        if (glitch) time->trigger();
 
         for (int i = 0; i < fpp; i++) {
             double tmp = sin(fakeNowPhasor);
@@ -744,9 +753,9 @@ void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and c
             for ( int s = 0; s < upToNow; s++ ) prediction[s] =
                     predictedPast[s/fpp][s%fpp];
             ba->train( coeffs,
-                     // fakePast
-                     (lastWasGlitch) ? prediction : realPast
-                     , pCnt, upToNow );
+                      // fakePast
+                      (lastWasGlitch) ? prediction : realPast
+                      , mPcnt, upToNow );
             ba->predict( coeffs, prediction );
             // if (pCnt < 200) for ( int s = 0; s < 3; s++ )
             //         cout << pCnt << "\t" << s << "---"
@@ -758,12 +767,12 @@ void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and c
 
         for ( int s = 0; s < fpp; s++ ) mTmpFloatBuf[s] = outputNowPacket[s] =
                 ((glitch) ?
-                     ( (pCnt < packetsInThePast) ? 0.0 : predictedNowPacket[s] )
+                     ( (mPcnt < packetsInThePast) ? 0.0 : predictedNowPacket[s] )
                           :
                      ( (lastWasGlitch) ?
                           ( mFadeDown[s] * futurePredictedPacket[s] + mFadeUp[s] * realNowPacket[s] )
                                       : realNowPacket[s] ));
-        // for ( int s = 0; s < fpp; s++ ) OUT(0,s) = coeffs[s];
+        // for ( int s = 0; s < fpp; s++ ) mTmpFloatBuf[s] = coeffs[s];
         lastWasGlitch = glitch;
 
         for ( int i = 0; i < packetsInThePast - 2; i++ ) {
@@ -773,19 +782,21 @@ void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and c
         for ( int s = 0; s < fpp; s++ ) predictedPast[packetsInThePast - 1][s] =
                 outputNowPacket[s];
 
-         for ( int s = 0; s < fpp; s++ ) futurePredictedPacket[s] =
+        for ( int s = 0; s < fpp; s++ ) futurePredictedPacket[s] =
                 prediction[beyondNow + s];
         //////////////////////////////////////
 
+        if (glitch) time->collect();
+        if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
     }
 }
 
 void TestPLC::ringBufferPull(int past) { // pull numbered packet from ring
-    bool priming = ((pCnt - past) < 0);
+    bool priming = ((mPcnt - past) < 0);
     if (!priming) {
-         int pastPtr = mWptr - past;
-         if (pastPtr < 0) pastPtr += mRing;
-         mTmpFloatBuf = mPacketRing[pastPtr];
+        int pastPtr = mWptr - past;
+        if (pastPtr < 0) pastPtr += mRing;
+        mTmpFloatBuf = mPacketRing[pastPtr];
     } else cout << "ring buffer not primed\n";
 }
 
@@ -796,17 +807,17 @@ void TestPLC::ringBufferPush() { // push received packet to ring
 }
 
 void TestPLC::toFloatBuf(MY_TYPE *in) {
-    for (int i = 0; i < Hapitrip::as.FPP; i++) {
-        double tmpIn = ((MY_TYPE)*in++) * Hapitrip::as.invScale;
+    for (int i = 0; i < fpp; i++) {
+        double tmpIn = ((MY_TYPE)*in++) * invScale;
         mTmpFloatBuf[i] = tmpIn;
     }
 }
 
 void TestPLC::fromFloatBuf(MY_TYPE *out) {
-    for (int i = 0; i < Hapitrip::as.FPP; i++) {
+    for (int i = 0; i < fpp; i++) {
         double tmpOut = mTmpFloatBuf[i];
         if (tmpOut > 1.0) tmpOut = 1.0;
         if (tmpOut < -1.0) tmpOut = -1.0;
-        *out++ = (MY_TYPE)(tmpOut * Hapitrip::as.scale);
+        *out++ = (MY_TYPE)(tmpOut * scale);
     }
 }
