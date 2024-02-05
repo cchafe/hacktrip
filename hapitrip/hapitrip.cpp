@@ -143,7 +143,7 @@ void UDP::start() {
         int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
         for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
             tmp[j] = 0;
-        mRingBuffer.push_back(tmp);
+        mByteRingBuffer.push_back(tmp);
     }
 
     if (!serverHostAddress.setAddress(mServer)) { // looks a lot like TCP's DNS
@@ -159,10 +159,11 @@ void UDP::start() {
     if (Hapitrip::as.verbose)
         std::cout << "UDP: start listening = " << ret << " "
                   << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
+    mRcvSeq = 0;
     mSendSeq = 0;
 
-    mTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen]; // for when not using an audio callback
-    memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
+    mByteTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen]; // for when not using an audio callback
+    memset(mByteTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
 
     mReg4 = new Regulator(Hapitrip::as.channels,
                           Hapitrip::as.bytesPerSample,
@@ -217,8 +218,8 @@ void UDP::start() {
 // sudo watch ss -tulpn
 
 UDP::~UDP() {
-    for (int i = 0; i < mRing; i++) delete mRingBuffer[i];
-    delete mTmpAudioBuf;
+    for (int i = 0; i < mRing; i++) delete mByteRingBuffer[i];
+    delete mByteTmpAudioBuf;
     //    delete reg; // don't delete if unused?
 }
 
@@ -239,7 +240,7 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     }
 }
 
-void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
+void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
 
     // force sine
     // mTest->sineTest((MY_TYPE *)buf);
@@ -250,52 +251,53 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
         if (Hapitrip::as.usePLCthread) mReg3->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
         else mReg4->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
     } else {
-        memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
+        memcpy(mByteRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
         mWptr++;
         mWptr %= mRing;
+        mRcvSeq = seq;
     }
 }
 
 // JackTrip mBufferStrategy 1,2,3,4
 // virtual void receiveNetworkPacket(int8_t* ptrToReadSlot)
-// translates to ringBufferPull()
+// translates to byteRingBufferPull()
 
-void UDP::ringBufferPull() { // pull next packet to play out from regulator or ring
-    //    std::cout << "ringBufferPull ";
+bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
+    //    std::cout << "byteRingBufferPull ";
     if (Hapitrip::as.usePLC) {
         if (Hapitrip::as.usePLCthread) emit signalReceivedNetworkPacket();
-        else mReg4->readSlotNonBlocking(mTmpAudioBuf);
-        //        if (Hapitrip::as.usePLCthread) std::cout << " == 3 "; else std::cout << " == 4 ";
+        else mReg4->readSlotNonBlocking(mByteTmpAudioBuf);
     } else  { // simple version of mBufferStrategy 1,2
-        //        std::cout << " == 1 ";
-        if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
+        // reads caught up to writes, or writes caught up to reads, reset
+        bool reset = (mRptr == mWptr);
+        if (reset) mRptr = mWptr - 2;
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;
-        memcpy(mTmpAudioBuf, mRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
+        memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
         mRptr++; // advance to the next slot
+        return reset;
     }
-    //    std::cout << "\n";
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
 ///////////////////////////////////////////////////
 // chuck is interleaved, so convert what it wants to send to be non-interleaved
 void UDP::sendAudioData(float *buf) { // buf from chuck is interleaved
-    MY_TYPE * tmp = (MY_TYPE *)mTmpAudioBuf; // make outgoing packet non-interleaved
+    MY_TYPE * tmp = (MY_TYPE *)mByteTmpAudioBuf; // make outgoing packet non-interleaved
     for (int i = 0; i < Hapitrip::as.channels*Hapitrip::as.FPP; i++) {
         int nilFr = i / Hapitrip::as.channels;
         int nilCh = i % Hapitrip::as.channels;
         tmp[nilCh*Hapitrip::as.FPP + nilFr] = (MY_TYPE)(buf[i] * Hapitrip::as.scale); // non-interleaved = interleaved
     }
-    send(mTmpAudioBuf);
+    send(mByteTmpAudioBuf);
 }
 
 // chuck is interleaved, so non-interleaved arriving packets are converted
 void UDP::rcvAudioData(float *buf) { // buf to chuck is interleaved
     readPendingDatagrams(); // and put in ring buffer
-    ringBufferPull();
-    //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf); // non-interleaved test signal
-    MY_TYPE * tmp1 = (MY_TYPE *)mTmpAudioBuf; // non-interleaved
+    byteRingBufferPull();
+    //    mTest->sineTest((MY_TYPE *)mByteTmpAudioBuf); // non-interleaved test signal
+    MY_TYPE * tmp1 = (MY_TYPE *)mByteTmpAudioBuf; // non-interleaved
     float * tmp2 = (float *)buf; // interleaved
     for (int i = 0; i < Hapitrip::as.channels*Hapitrip::as.FPP; i++) {
         int nilFr = i / Hapitrip::as.channels;
@@ -325,7 +327,7 @@ void UDP::readPendingDatagrams() { // incoming is triggered from readyRead signa
         int8_t *audioBuf = (int8_t *)(mRcvPacket.data() + sizeof(HeaderStruct));
         //            mTest->sineTest((MY_TYPE *)audioBuf); // output sines
         //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio signal
-        ringBufferPush(audioBuf, rcvSeq);
+        byteRingBufferPush(audioBuf, rcvSeq);
     }
 }
 
@@ -383,8 +385,22 @@ int UDP::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio
     // }
     // else {
     send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
-    ringBufferPull();
-    memcpy(outputBuffer, mTmpAudioBuf, Hapitrip::as.audioDataLen);
+
+    /////////////////////////
+    // buffer length of 2
+    // mRcvSeq is most recent seq pushed, output it
+    // mSeqRingBuffer
+
+
+    bool glitch = byteRingBufferPull();
+    toFloatBuf((MY_TYPE *)mByteTmpAudioBuf);
+    burg( glitch );
+    fromFloatBuf((MY_TYPE *)outputBuffer);
+
+    /////////////////////////
+
+    // memcpy(outputBuffer, mByteTmpAudioBuf, Hapitrip::as.audioDataLen);
+
     // audio diagnostics, modify or print output and input buffers
     //    memcpy(outputBuffer, inputBuffer, Hapitrip::mAudioDataLen); // test
     //    straight wire mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
@@ -603,7 +619,7 @@ void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert 
 int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format UDP callback method
                                   unsigned int nBufferFrames, double streamTime,
                                   RtAudioStreamStatus status, void *arg) {
-    // static_cast<TestPLC *>(arg)->mTmpAudioBufIn[0] = 9.99;
+    // static_cast<TestPLC *>(arg)->mByteTmpAudioBuf[0] = 9.99;
     return static_cast<TestPLC *>(arg)->audioCallback( // callback method
         outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
 }
@@ -634,11 +650,7 @@ int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by a
 
     bool glitch = !(mPcnt%30);
     // QThread::usleep(1000);
-    if (glitch) time->trigger();
-    burg( glitch, (mPcnt > packetsInThePast) );
-    // if (glitch) mTmpFloatBuf = mZeros;
-    if (glitch) time->collect();
-    if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
+    burg( glitch );
 
     fromFloatBuf((MY_TYPE *)outputBuffer);
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
@@ -719,7 +731,8 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     ba = new BurgAlgorithm(coeffs, upToNow);
 }
 
-void TestPLC::burg(bool glitch, bool primed) { // generate next bufferfull and convert to short int
+void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
+    bool primed = mPcnt > packetsInThePast;
     for (int ch = 0; ch < channels; ch++) {
         //////////////////////////////////////
         if (glitch) time->trigger();

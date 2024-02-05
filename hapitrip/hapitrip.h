@@ -68,7 +68,7 @@ public:
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
     void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
-    void burg(bool glitch, bool primed); // generate a signal
+    void burg(bool glitch); // generate a signal
     void toFloatBuf(MY_TYPE *in);
     void fromFloatBuf(MY_TYPE *out);
     int mPcnt;
@@ -135,8 +135,8 @@ public:
     // for non-audio callback triggering of audio rcv and send e.g., chuck
     void rcvAudioData(float *buf); // readPendingDatagrams into ring and pull next packet from ring
     void sendAudioData(float *buf); // convert one bufferfull to short int and send out
-    void ringBufferPush(int8_t *buf, int seq); // push received packet to ring
-    void ringBufferPull(); // pull next packet to play out from ring put in mTmpAudioBuf
+    void byteRingBufferPush(int8_t *buf, int seq); // push received packet to ring
+    bool byteRingBufferPull(); // pull next packet to play out from ring put in mByteTmpAudioBuf
 #ifndef NO_AUDIO
     int audioCallback(void *outputBuffer, void *inputBuffer,
                       unsigned int nBufferFrames, double streamTime,
@@ -149,19 +149,21 @@ private:
     int mWptr; // ring buffer write pointer
     int mRptr; // ring buffer read pointer
     int mRing; // ring buffer length in number of packets
-    std::vector<int8_t *> mRingBuffer; // ring buffer
+    std::vector<int8_t *> mByteRingBuffer; // ring buffer
+    std::vector<int8_t *> mSeqRingBuffer; // seq num ring buffer
     QHostAddress serverHostAddress; // peer
     int mPeerUdpPort = 0; // ephemeral peer audio port given by peer
     HeaderStruct mHeader; // packet header for the outgoing packet
     QByteArray mRcvPacket; // the incoming packet
     QByteArray mSendPacket; // the outgoing packet
+    int mRcvSeq; // sequence number read from the header of the ingoing packet
     int mSendSeq; // sequence number written in the header for the outgoing packet
     QElapsedTimer mRcvTimer; // for rcvElapsedTime
     TestAudio *mTest; // in case test points are needed
 public slots:
     void readPendingDatagrams(); // when readyRead is signaled
 private:
-    int8_t *mTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
+    int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     QString mServer; // peer address
 
 
