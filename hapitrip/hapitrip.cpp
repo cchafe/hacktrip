@@ -31,6 +31,8 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     mUdp->setPeerUdpPort(mTcp->connectToServer()); // to get the server port to send to
     delete mTcp; // done with TCP
     mUdp->setTest(as.channels); // in case of audio test points
+    mAudio.setTestPLC(as.channels,
+                      as.FPP, 16, 2);
 #ifndef NO_AUDIO
     mAudio.setUdp(mUdp);
 #endif
@@ -425,15 +427,15 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     mUdp->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
     // mUdp->dummy= 777;
     // std::cout << mUdp->dummy << "here\n";
-    // mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
+    mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
 
-    // bool glitch = !(mTestPLC->mPcnt%30);
-    //     // QThread::usleep(1000);
-    //     mTestPLC->burg( glitch );
+    bool glitch = !(mTestPLC->mPcnt%30);
+        // QThread::usleep(1000);
+    mTestPLC->burg( glitch );
 
-    // mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
-    // // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
-    // mTestPLC->mPcnt++;
+    mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
+    // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
+    mTestPLC->mPcnt++;
     // audio diagnostics, modify or print output and input buffers
     memcpy(outputBuffer, inputBuffer,
            Hapitrip::as.audioDataLen); // test straight wire
