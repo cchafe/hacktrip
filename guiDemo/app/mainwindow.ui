@@ -150,6 +150,11 @@
      </property>
      <item>
       <property name="text">
+       <string>localhost</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>jackloop128.stanford.edu</string>
       </property>
      </item>

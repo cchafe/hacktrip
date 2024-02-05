@@ -374,67 +374,39 @@ bool UDP::exceedsCallbackInterval( double msPadding ) {
     return exceeds;
 }
 
-int UDP::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio driver for audio transfers
-                       unsigned int /* nBufferFrames */,
-                       double /* streamTime */,
-                       RtAudioStreamStatus /* status */,
-                       void * /* data */) // last arg is used for "this"
-{
-    // if (exceedsCallbackInterval(0.25)) {
-    //     std::cout << "    that's how bad the previous callback exceeded \n";
-    // }
-    // else {
-    send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+// int UDP::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio driver for audio transfers
+//                        unsigned int /* nBufferFrames */,
+//                        double /* streamTime */,
+//                        RtAudioStreamStatus /* status */,
+//                        void * /* data */) // last arg is used for "this"
+// {
+//     // if (exceedsCallbackInterval(0.25)) {
+//     //     std::cout << "    that's how bad the previous callback exceeded \n";
+//     // }
+//     // else {
+//     send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+//     byteRingBufferPull();
+//     memcpy(outputBuffer, mByteTmpAudioBuf, Hapitrip::as.audioDataLen);
 
-    /////////////////////////
-    // buffer length of 2
-    // mRcvSeq is most recent seq pushed, output it
-    // mSeqRingBuffer
+//     // audio diagnostics, modify or print output and input buffers
+//     //    memcpy(outputBuffer, inputBuffer, Hapitrip::mAudioDataLen); // test
+//     //    straight wire mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
+//     //    mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
+//     // }
+//     return 0;
+// }
 
-
-    bool glitch = byteRingBufferPull();
-    toFloatBuf((MY_TYPE *)mByteTmpAudioBuf);
-    burg( glitch );
-    fromFloatBuf((MY_TYPE *)outputBuffer);
-
-    /////////////////////////
-
-    // memcpy(outputBuffer, mByteTmpAudioBuf, Hapitrip::as.audioDataLen);
-
-    // audio diagnostics, modify or print output and input buffers
-    //    memcpy(outputBuffer, inputBuffer, Hapitrip::mAudioDataLen); // test
-    //    straight wire mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
-    //    mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
-    // }
-    return 0;
-}
-
-int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format UDP callback method
-                                  unsigned int nBufferFrames, double streamTime,
-                                  RtAudioStreamStatus status, void *arg) {
-    return static_cast<UDP *>(arg)->audioCallback( // callback method
-        outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
-}
+// int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format UDP callback method
+//                                   unsigned int nBufferFrames, double streamTime,
+//                                   RtAudioStreamStatus status, void *arg) {
+//     return static_cast<UDP *>(arg)->audioCallback( // callback method
+//         outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
+// }
 
 #endif
 
 // comment out this directive so testPLC can take over callback
 // #else // test with the straight wire example in RtAudio examples/duplex
-
-int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
-                         unsigned int /* nBufferFrames */,
-                         double /* streamTime */,
-                         RtAudioStreamStatus /* status */,
-                         void * /* data */) // last arg is used for "this"
-{
-    // audio diagnostics, modify or print output and input buffers
-    memcpy(outputBuffer, inputBuffer,
-           Hapitrip::as.audioDataLen); // test straight wire
-    // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
-    // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
-
-    return 0;
-}
 
 int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format above callback method
 
@@ -442,6 +414,33 @@ int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim
                                   RtAudioStreamStatus status, void *arg) {
     return static_cast<Audio *>(arg)->audioCallback(
         outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
+}
+
+int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
+                         unsigned int /* nBufferFrames */,
+                         double /* streamTime */,
+                         RtAudioStreamStatus /* status */,
+                         void * /* data */) // last arg is used for "this"
+{ // xxx
+    mUdp->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+    // mUdp->dummy= 777;
+    // std::cout << mUdp->dummy << "here\n";
+    // mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
+
+    // bool glitch = !(mTestPLC->mPcnt%30);
+    //     // QThread::usleep(1000);
+    //     mTestPLC->burg( glitch );
+
+    // mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
+    // // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
+    // mTestPLC->mPcnt++;
+    // audio diagnostics, modify or print output and input buffers
+    memcpy(outputBuffer, inputBuffer,
+           Hapitrip::as.audioDataLen); // test straight wire
+    // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
+    // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
+
+    return 0;
 }
 #endif
 
@@ -516,12 +515,12 @@ bool Audio::start() {
     unsigned int bufferFrames = Hapitrip::as.FPP;
 #ifndef AUDIO_ONLY
 #ifdef USEBETA
-    if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT,
-                           Hapitrip::as.sampleRate,
-                           &bufferFrames, &Audio::wrapperProcessCallback,
-                           (void *)mUdp,
-                           &options)) // specify UDP class callback
-        std::cout << "\nCouldn't open audio device streams!\n";
+    // if (m_adac->openStream(&m_oParams, &m_iParams, FORMAT,
+    //                        Hapitrip::as.sampleRate,
+    //                        &bufferFrames, &Audio::wrapperProcessCallback,
+    //                        (void *)mUdp,
+    //                        &options)) // specify UDP class callback
+    //     std::cout << "\nCouldn't open audio device streams!\n";
 #else
     m_adac->openStream( &m_oParams, &m_iParams, FORMAT,
                        Hapitrip::as.sampleRate, &bufferFrames,
@@ -538,11 +537,11 @@ bool Audio::start() {
         std::cout << "\nCouldn't open audio device streams!\n";
 
 #endif
-    m_adac->openStream( &m_oParams, &m_iParams, FORMAT,
-                       Hapitrip::as.sampleRate, &bufferFrames,
-                       &Audio::wrapperProcessCallback,
-                       (void *)mTestPLC,
-                       &options );
+    // m_adac->openStream( &m_oParams, &m_iParams, FORMAT,
+    //                    Hapitrip::as.sampleRate, &bufferFrames,
+    //                    &Audio::wrapperProcessCallback,
+    //                    (void *)mTestPLC,
+    //                    &options );
     bool fail = false;
     if (m_adac->isStreamOpen() == false) {
         std::cout << "\nCouldn't open audio device streams!\n";
@@ -616,14 +615,6 @@ void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert 
     }
 }
 
-int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format UDP callback method
-                                  unsigned int nBufferFrames, double streamTime,
-                                  RtAudioStreamStatus status, void *arg) {
-    // static_cast<TestPLC *>(arg)->mByteTmpAudioBuf[0] = 9.99;
-    return static_cast<TestPLC *>(arg)->audioCallback( // callback method
-        outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
-}
-
 void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bufferfull and convert to short int
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         for (int i = 0; i < Hapitrip::as.FPP; i++) {
@@ -634,29 +625,34 @@ void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate
     }
 }
 
+// int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format UDP callback method
+//                                   unsigned int nBufferFrames, double streamTime,
+//                                   RtAudioStreamStatus status, void *arg) {
+//     // static_cast<TestPLC *>(arg)->mByteTmpAudioBuf[0] = 9.99;
+//     return static_cast<TestPLC *>(arg)->audioCallback( // callback method
+//         outputBuffer, inputBuffer, nBufferFrames, streamTime, status, arg);
+// }
+
+
+// int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio driver for audio transfers
+//                            unsigned int /* nBufferFrames */,
+//                            double /* streamTime */,
+//                            RtAudioStreamStatus /* status */,
+//                            void * /* data */) // last arg is used for "this"
+// {
+//     toFloatBuf((MY_TYPE *)inputBuffer);
+
+//     bool glitch = !(mPcnt%30);
+//     // QThread::usleep(1000);
+//     burg( glitch );
+
+//     fromFloatBuf((MY_TYPE *)outputBuffer);
+//     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
+//     mPcnt++;
+//     return 0;
+// }
+
 #define NOW (pCnt * fpp) // incrementing time
-
-int TestPLC::audioCallback(void *outputBuffer, void *inputBuffer, // called by audio driver for audio transfers
-                           unsigned int /* nBufferFrames */,
-                           double /* streamTime */,
-                           RtAudioStreamStatus /* status */,
-                           void * /* data */) // last arg is used for "this"
-{
-    // send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
-    // ringBufferPull();
-    // straightWire((MY_TYPE *)outputBuffer,(MY_TYPE *)inputBuffer,(!(pCnt%80)));
-    // sineTest((MY_TYPE *)inputBuffer); // output sines
-    toFloatBuf((MY_TYPE *)inputBuffer);
-
-    bool glitch = !(mPcnt%30);
-    // QThread::usleep(1000);
-    burg( glitch );
-
-    fromFloatBuf((MY_TYPE *)outputBuffer);
-    // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
-    mPcnt++;
-    return 0;
-}
 
 TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     : channels(chans), fpp(fpp), bps(bps), packetsInThePast(packetsInThePast)

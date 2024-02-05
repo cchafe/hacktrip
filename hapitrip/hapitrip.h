@@ -9,7 +9,7 @@ using namespace std; // for vector for TestPLC burg
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
 
-#define AUDIO_ONLY
+// #define AUDIO_ONLY
 #ifdef AUDIO_ONLY
 #include "qobject.h"
 #include "qobjectdefs.h"
@@ -64,9 +64,9 @@ public:
 class TestPLC { // for insertion in test points
 public:
     TestPLC(int chans, int fpp, int bps, int packetsInThePast);
-    int audioCallback(void *outputBuffer, void *inputBuffer,
-                      unsigned int nBufferFrames, double streamTime,
-                      RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
+    // int audioCallback(void *outputBuffer, void *inputBuffer,
+    //                   unsigned int nBufferFrames, double streamTime,
+    //                   RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
     void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
     void burg(bool glitch); // generate a signal
     void toFloatBuf(MY_TYPE *in);
@@ -144,6 +144,7 @@ public:
 #endif
     Regulator * mReg3; // bufstrategy 3, separate thread
     Regulator * mReg4; // bufstrategy 4
+    int dummy = 99;
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -254,7 +255,7 @@ class APIsettings {
         (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
-    static const bool dVerbose = 0;
+    static const bool dVerbose = 1;
     static const bool dUsePLC = 0;
     static const bool dUsePLCthread = 0;
 #endif
