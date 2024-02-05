@@ -56,7 +56,13 @@ public:
         accum += tmp;
         cnt++;
     }
-    double avg() { double tmp = accum / (double)cnt; accum = 0.0; cnt = 0; return tmp; }
+    double avg() {
+        if (!cnt) return 0.0;
+        double tmp = accum / (double)cnt;
+        accum = 0.0;
+        cnt = 0;
+        return tmp;
+    }
     void start() { mCallbackTimer.start(); }
     void trigger() { tmpTime = mCallbackTimer.nsecsElapsed(); }
 };
@@ -144,7 +150,7 @@ public:
 #endif
     Regulator * mReg3; // bufstrategy 3, separate thread
     Regulator * mReg4; // bufstrategy 4
-    int dummy = 99;
+    int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -164,7 +170,6 @@ private:
 public slots:
     void readPendingDatagrams(); // when readyRead is signaled
 private:
-    int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     QString mServer; // peer address
 
 

@@ -212,6 +212,7 @@ void UDP::start() {
         mRegulatorWorkerPtr = workerPtr;
     }
 */
+    rcvElapsedTime(true);
 };
 
 // example system commands that show udp port in use in case of trouble starting
@@ -229,7 +230,7 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     double elapsed = (double)mRcvTimer.nsecsElapsed() / 1000000.0;
     double delta = (double)elapsed-(double)Hapitrip::as.packetPeriodMS;
     if (restart) mRcvTimer.start();
-    else if (Hapitrip::as.verbose && (delta > 0.0)) {
+    else if (Hapitrip::as.verbose) { // && (delta > 0.0)) {
         std::cout.setf(std::ios::showpoint);
         std::cout   << std::setprecision(4) << std::setw(4);
         std::cout   << elapsed
@@ -253,6 +254,7 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
         if (Hapitrip::as.usePLCthread) mReg3->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
         else mReg4->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
     } else {
+        rcvElapsedTime(false);
         memcpy(mByteRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
         mWptr++;
         mWptr %= mRing;
@@ -263,22 +265,22 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
 // JackTrip mBufferStrategy 1,2,3,4
 // virtual void receiveNetworkPacket(int8_t* ptrToReadSlot)
 // translates to byteRingBufferPull()
-
+// xxx
 bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
     //    std::cout << "byteRingBufferPull ";
+    bool reset = (mRptr == mWptr);
     if (Hapitrip::as.usePLC) {
         if (Hapitrip::as.usePLCthread) emit signalReceivedNetworkPacket();
         else mReg4->readSlotNonBlocking(mByteTmpAudioBuf);
     } else  { // simple version of mBufferStrategy 1,2
         // reads caught up to writes, or writes caught up to reads, reset
-        bool reset = (mRptr == mWptr);
         if (reset) mRptr = mWptr - 2;
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;
         memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
         mRptr++; // advance to the next slot
-        return reset;
     }
+    return reset;
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
@@ -425,11 +427,12 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
                          void * /* data */) // last arg is used for "this"
 { // xxx
     mUdp->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
-    // mUdp->dummy= 777;
-    // std::cout << mUdp->dummy << "here\n";
-    mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
 
-    bool glitch = !(mTestPLC->mPcnt%30);
+    bool glitch = mUdp->byteRingBufferPull();
+
+    mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+    // mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
+    // bool glitch = !(mTestPLC->mPcnt%30);
         // QThread::usleep(1000);
     mTestPLC->burg( glitch );
 
