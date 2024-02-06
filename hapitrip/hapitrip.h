@@ -56,6 +56,12 @@ public:
         accum += tmp;
         cnt++;
     }
+    double instantElapsed( ){
+        return (mCallbackTimer.nsecsElapsed() - tmpTime) / 1000000.0;
+    }
+    double instantAbsolute( ){
+        return (mCallbackTimer.nsecsElapsed()) / 1000000.0;
+    }
     double avg() {
         if (!cnt) return 0.0;
         double tmp = accum / (double)cnt;
@@ -157,7 +163,8 @@ private:
     int mRptr; // ring buffer read pointer
     int mRing; // ring buffer length in number of packets
     std::vector<int8_t *> mByteRingBuffer; // ring buffer
-    std::vector<int8_t *> mSeqRingBuffer; // seq num ring buffer
+    std::vector<int> mSeqRingBuffer; // seq num ring buffer
+    std::vector<double> mArrivalRingBuffer; // seq num ring buffer
     QHostAddress serverHostAddress; // peer
     int mPeerUdpPort = 0; // ephemeral peer audio port given by peer
     HeaderStruct mHeader; // packet header for the outgoing packet
@@ -171,6 +178,7 @@ public slots:
     void readPendingDatagrams(); // when readyRead is signaled
 private:
     QString mServer; // peer address
+    int mCadence;
 
 
     /// thread used to pull packets from Regulator (if mBufferStrategy==3)
@@ -179,6 +187,7 @@ private:
     QObject* mRegulatorWorkerPtr;
     double lastCallbackTime;
     QElapsedTimer mCallbackTimer; // for rcvElapsedTime
+    Time pushTimer;
     bool exceedsCallbackInterval( double msPadding );
 signals:
     void signalReceivedNetworkPacket();
