@@ -106,6 +106,7 @@ public:
     //                   RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
     void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
     void burg(bool glitch); // generate a signal
+    void zeroTmpFloatBuf();
     void toFloatBuf(MY_TYPE *in);
     void fromFloatBuf(MY_TYPE *out);
     int mPcnt;

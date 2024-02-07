@@ -476,6 +476,7 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 
     bool glitch = mUdp->byteRingBufferPull();
 
+    mTestPLC->zeroTmpFloatBuf();
     mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
     mTestPLC->burg( glitch );
     mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
@@ -854,6 +855,11 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
         if (glitch) time->collect();
     }
     if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
+}
+
+void TestPLC::zeroTmpFloatBuf() {
+    for (int ch = 0; ch < channels; ch++)
+        mChanData[ch]->mTmpFloatBuf = mChanData[ch]->mZeros;
 }
 
 void TestPLC::toFloatBuf(MY_TYPE *in) {
