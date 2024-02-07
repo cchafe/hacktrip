@@ -78,6 +78,7 @@ public:
     Channel ( int fpp, int upToNow, int packetsInThePast );
     void ringBufferPush();
     void ringBufferPull(int past);
+    double fakeNowPhasorInc;
 private:
     vector<float> predictedNowPacket;
     vector<float> realNowPacket;

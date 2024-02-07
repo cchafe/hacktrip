@@ -249,7 +249,6 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
 }
 
 void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
-    // xxx
     // force sine
     // mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
@@ -283,19 +282,21 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
 // xxx
 bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
     //    std::cout << "byteRingBufferPull ";
-    int lag = 44;
+    int lag = 0; // mRing set to 50
     mCadence--;
     if (mCadence != lag) {
         if (mCadence > lag) {
-            std::cout  << " over \n";
+            // std::cout  << " over \n";
         } else { // < lag
-            std::cout  << " under \n";
-            mRptr = mWptr - lag;
-            if (mRptr<0) mRptr += mRing;
-            mRptr %= mRing;
-            memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
-            mCadence++;
-            return false;
+            // std::cout  << " under \n";
+
+            // mRptr = mWptr - lag;
+            // if (mRptr<0) mRptr += mRing;
+            // mRptr %= mRing;
+            // memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
+            // mCadence++;
+            // return false;
+
         }
         mCadence = lag;
         // std::cout  << " glitch \n";
@@ -477,13 +478,11 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 
     mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
     mTestPLC->burg( glitch );
-
     mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
-    // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen);
 
     mTestPLC->mPcnt++;
-    // memcpy(outputBuffer, inputBuffer,
-    //        Hapitrip::as.audioDataLen); // test straight wire
+
+    // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
     // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
     // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
 
@@ -648,7 +647,7 @@ void TestAudio::sineTest(MY_TYPE *buffer) { // generate next bufferfull and conv
             double tmp = sin(mPhasor[ch]);
             tmp *= 0.1;
             *buffer++ = (MY_TYPE)(tmp * Hapitrip::as.scale);
-            mPhasor[ch] += ((ch) ? 0.2 : 0.22);
+            mPhasor[ch] += ((ch) ? 0.1 : 0.17);
         }
     }
 }
@@ -657,7 +656,7 @@ void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert 
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         for (int i = 0; i < Hapitrip::as.FPP; i++) {
             double tmp = ((MY_TYPE)*buffer++) * Hapitrip::as.invScale;
-            std::cout << "\t" << tmp << std::endl;
+            std::cout << "\t" << tmp << "\t" << ch << std::endl;
         }
     }
 }
@@ -743,11 +742,12 @@ Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
     }
     fakeNow.resize( fpp );
     fakeNowPhasor = 0.0;
+    fakeNowPhasorInc = 0.22;
     for (int i = 0; i < fpp; i++) {
         double tmp = sin(fakeNowPhasor);
         tmp *= 0.1;
         fakeNow[i] = tmp;
-        fakeNowPhasor += 0.22;
+        fakeNowPhasor += fakeNowPhasorInc;
     }
 }
 
@@ -767,9 +767,10 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     beyondNow = (packetsInThePast + 1) * fpp; // duration
 
     mChanData.resize( channels );
-    for (int ch = 0; ch < channels; ch++)
+    for (int ch = 0; ch < channels; ch++) {
         mChanData[ch] = new Channel ( fpp, upToNow, packetsInThePast );
-
+        mChanData[ch]->fakeNowPhasorInc = 0.11 + 0.03 * ch;
+    }
     mFadeUp.resize( fpp );
     mFadeDown.resize( fpp );
     for (int i = 0; i < fpp; i++) {
@@ -782,7 +783,7 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
 //xxx
 void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
     bool primed = mPcnt > packetsInThePast;
-    for (int ch = 0; ch < channels; ch++) {
+    for (int ch = 0; ch < 1; ch++) {
         Channel * c = mChanData[ch];
         //////////////////////////////////////
         if (glitch) time->trigger();
@@ -791,7 +792,7 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
             double tmp = sin( c->fakeNowPhasor );
             tmp *= 0.1;
             c->fakeNow[i] = tmp;
-            c->fakeNowPhasor += 0.22;
+            c->fakeNowPhasor += c->fakeNowPhasorInc;
         }
 
         for ( int s = 0; s < fpp; s++ ) c->realNowPacket[s] = (!glitch) ? c->mTmpFloatBuf[s] : 0.0;
@@ -834,7 +835,9 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                      ( (lastWasGlitch) ?
                           ( mFadeDown[s] * c->futurePredictedPacket[s] + mFadeUp[s] * c->realNowPacket[s] )
                                       : c->realNowPacket[s] ));
-        // for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->coeffs[s];
+
+        for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->fakeNow[s];
+
         lastWasGlitch = glitch;
 
         for ( int i = 0; i < packetsInThePast - 2; i++ ) {
@@ -849,8 +852,8 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
         //////////////////////////////////////
 
         if (glitch) time->collect();
-        if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
     }
+    if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
 }
 
 void TestPLC::toFloatBuf(MY_TYPE *in) {
