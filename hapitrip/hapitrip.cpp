@@ -783,7 +783,7 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
 //xxx
 void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
     bool primed = mPcnt > packetsInThePast;
-    for (int ch = 0; ch < 1; ch++) {
+    for (int ch = 0; ch < channels; ch++) {
         Channel * c = mChanData[ch];
         //////////////////////////////////////
         if (glitch) time->trigger();
