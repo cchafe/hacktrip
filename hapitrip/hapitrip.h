@@ -73,6 +73,30 @@ public:
     void trigger() { tmpTime = mCallbackTimer.nsecsElapsed(); }
 };
 
+class Channel {
+public:
+    Channel ( int fpp, int upToNow, int packetsInThePast );
+    void ringBufferPush();
+    void ringBufferPull(int past);
+private:
+    vector<float> predictedNowPacket;
+    vector<float> realNowPacket;
+    vector<float> outputNowPacket;
+    vector<float> futurePredictedPacket;
+    vector<float> realPast;
+    vector<vector<float>> predictedPast;
+    vector<float> coeffs;
+    vector<float> prediction;
+    vector<vector<float>> mPacketRing;
+    int mWptr;
+    int mRing;
+    vector<float> fakeNow;
+    double fakeNowPhasor;
+    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
+    vector<float> mZeros;
+    friend class TestPLC;
+};
+
 class TestPLC { // for insertion in test points
 public:
     TestPLC(int chans, int fpp, int bps, int packetsInThePast);
@@ -85,10 +109,8 @@ public:
     void fromFloatBuf(MY_TYPE *out);
     int mPcnt;
     vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
-    vector<float> mZeros;
+    vector<Channel *> mChanData;
 private:
-    void ringBufferPush();
-    void ringBufferPull(int past);
     BurgAlgorithm *ba;
     int channels;
     int fpp;
@@ -96,23 +118,9 @@ private:
     int packetsInThePast;
     int upToNow; // duration
     int beyondNow; // duration
-
     vector<float> mFadeUp;
     vector<float> mFadeDown;
-    vector<float> predictedNowPacket;
-    vector<float> realNowPacket;
-    vector<float> outputNowPacket;
-    vector<float> futurePredictedPacket;
-    vector<float> realPast;
-    vector<vector<float>> predictedPast;
-    vector<float> coeffs;
-    vector<float> prediction;
     bool lastWasGlitch;
-    vector<vector<float>> mPacketRing;
-    int mWptr;
-    int mRing;
-    vector<float> fakeNow;
-    double fakeNowPhasor;
     Time * time;
     float scale;
     float invScale;
@@ -251,7 +259,7 @@ class APIsettings {
     static const int dRtAudioAPI = 0;
     static const int dSampleRate = 48000;
     static const int dFPP = 128;
-    static const int dChannels = 1;
+    static const int dChannels = 2;
     static const int dBytesPerSample = sizeof(MY_TYPE);
     static const int dAudioDataLen = dFPP * dChannels * dBytesPerSample;
     constexpr static const double dScale = 32767.0;

@@ -28,11 +28,10 @@ bool classify(double d)
     return tmp;
 }
 
-BurgAlgorithm::BurgAlgorithm(vector<DBL> &coeffs, size_t size)
+BurgAlgorithm::BurgAlgorithm( size_t size )
 {
     // GET SIZE FROM INPUT VECTORS
-    m = coeffs.size();
-    N = size - 1;
+    m = N = size - 1;
     this->size = size;
     if (size < m)
         qDebug() << "time_series should have more elements than the AR order is";
