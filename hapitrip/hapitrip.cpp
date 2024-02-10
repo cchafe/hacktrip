@@ -253,23 +253,9 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
     // mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
 
-    if (Hapitrip::as.usePLC) {
-        // if (Hapitrip::as.usePLCthread) mReg3->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
-        // else mReg4->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
-    } else {
-        // double arrival = pushTimer.instantAbsolute();
-        // std::cout.setf(std::ios::showpoint);
-        // std::cout   << std::setprecision(4) << std::setw(4);
-        // std::cout   << pushTimer.instantElapsed()
-        //           << " (ms)   nominal = "
-        //           << Hapitrip::as.packetPeriodMS
-        //           << " arrival = "
-        //           << arrival
-        //           << std::endl;
-        // pushTimer.trigger();
+    {
         memcpy(mByteRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
-        // mArrivalRingBuffer[mWptr] = arrival;
-        // mSeqRingBuffer[mWptr] = seq;
+        mRcvSeq = seq;
         mWptr++;
         mWptr %= mRing;
         mCadence++;
@@ -282,54 +268,18 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
 // xxx
 bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
     //    std::cout << "byteRingBufferPull ";
-    if (mRcvSeq) {
-        mCadence--;
+    if ((mRcvSeq > 100)&&(abs(mCadence) > 8)) {
+        mCadence = 0;
         // std::cout  << " mCadence " << mCadence << " \n";
+        return true;
     }
-    int lag = 0; // mRing set to 50
-    // if (mCadence != lag) {
-    //     if (mCadence > lag) {
-    //         // std::cout  << " over \n";
-    //     } else { // < lag
-    //         // std::cout  << " under \n";
-
-    //         // mRptr = mWptr - lag;
-    //         // if (mRptr<0) mRptr += mRing;
-    //         // mRptr %= mRing;
-    //         // memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
-    //         // mCadence++;
-    //         // return false;
-
-    //     }
-    //     mCadence = lag;
-    //     // std::cout  << " glitch \n";
-    //     return true;
-    // }
-    if (Hapitrip::as.usePLC) {
-        // if (Hapitrip::as.usePLCthread) emit signalReceivedNetworkPacket();
-        // else mReg4->readSlotNonBlocking(mByteTmpAudioBuf);
-    } else  { // simple version of mBufferStrategy 1,2
-        // reads caught up to writes, or writes caught up to reads, reset
-        // if (mRptr == mWptr) mRptr = mWptr - 2;
-        mRptr = mWptr - 15;
+    { // simple version of mBufferStrategy 1,2
+        mRptr = mWptr-30;
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;
         memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
-        // double arrival = mArrivalRingBuffer[mRptr];
-        // if (mRcvSeq == mSeqRingBuffer[mRptr]) reset = true;
-        // mRcvSeq = mSeqRingBuffer[mRptr];
-        // std::cout.setf(std::ios::showpoint);
-        // std::cout   << std::setprecision(8) << std::setw(8);
-        // std::cout  << " arrival = "
-        //           << arrival
-        //           << " mRcvSeq = "
-        //           << mRcvSeq
-        //           << ((reset)?" *":"")
-        //           << std::endl;
-        // mRptr++; // advance to the next slot
-        // std::cout  << " ok \n";
+        return false;
     }
-    return false;
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
