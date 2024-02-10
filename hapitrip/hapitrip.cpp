@@ -282,33 +282,36 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
 // xxx
 bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
     //    std::cout << "byteRingBufferPull ";
-    int lag = 0; // mRing set to 50
-    mCadence--;
-    if (mCadence != lag) {
-        if (mCadence > lag) {
-            // std::cout  << " over \n";
-        } else { // < lag
-            // std::cout  << " under \n";
-
-            // mRptr = mWptr - lag;
-            // if (mRptr<0) mRptr += mRing;
-            // mRptr %= mRing;
-            // memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
-            // mCadence++;
-            // return false;
-
-        }
-        mCadence = lag;
-        // std::cout  << " glitch \n";
-        return true;
+    if (mRcvSeq) {
+        mCadence--;
+        // std::cout  << " mCadence " << mCadence << " \n";
     }
+    int lag = 0; // mRing set to 50
+    // if (mCadence != lag) {
+    //     if (mCadence > lag) {
+    //         // std::cout  << " over \n";
+    //     } else { // < lag
+    //         // std::cout  << " under \n";
+
+    //         // mRptr = mWptr - lag;
+    //         // if (mRptr<0) mRptr += mRing;
+    //         // mRptr %= mRing;
+    //         // memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
+    //         // mCadence++;
+    //         // return false;
+
+    //     }
+    //     mCadence = lag;
+    //     // std::cout  << " glitch \n";
+    //     return true;
+    // }
     if (Hapitrip::as.usePLC) {
         // if (Hapitrip::as.usePLCthread) emit signalReceivedNetworkPacket();
         // else mReg4->readSlotNonBlocking(mByteTmpAudioBuf);
     } else  { // simple version of mBufferStrategy 1,2
         // reads caught up to writes, or writes caught up to reads, reset
         // if (mRptr == mWptr) mRptr = mWptr - 2;
-        mRptr = mWptr - 0;
+        mRptr = mWptr - 15;
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;
         memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
@@ -474,13 +477,11 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 { // xxx
     mUdp->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
 
-    bool glitch = mUdp->byteRingBufferPull();
-
     mTestPLC->zeroTmpFloatBuf();
+    bool glitch = mUdp->byteRingBufferPull();
     mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
     mTestPLC->burg( glitch );
     mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
-
     mTestPLC->mPcnt++;
 
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
@@ -837,7 +838,7 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                           ( mFadeDown[s] * c->futurePredictedPacket[s] + mFadeUp[s] * c->realNowPacket[s] )
                                       : c->realNowPacket[s] ));
 
-        for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->fakeNow[s];
+        // for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->fakeNow[s];
 
         lastWasGlitch = glitch;
 
