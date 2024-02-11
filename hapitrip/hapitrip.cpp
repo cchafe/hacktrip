@@ -254,11 +254,14 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
     //    mTest->printSamples((MY_TYPE *)buf);
 
     {
-        memcpy(mByteRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
+        // mWptr += mCadence;
+        // mWptr %= mRing;
+        // memcpy(mByteRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
         mRcvSeq = seq;
-        mWptr++;
-        mWptr %= mRing;
-        mCadence++;
+        // mSeqRingBuffer[mWptr] = mRcvSeq;
+
+        memcpy(mByteTmpAudioBuf, buf, Hapitrip::as.audioDataLen); // put in ring
+
     }
 }
 
@@ -267,19 +270,22 @@ void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push re
 // translates to byteRingBufferPull()
 // xxx
 bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
-    //    std::cout << "byteRingBufferPull ";
-    if ((mRcvSeq > 100)&&(abs(mCadence) > 8)) {
-        mCadence = 0;
-        // std::cout  << " mCadence " << mCadence << " \n";
-        return true;
-    }
-    { // simple version of mBufferStrategy 1,2
-        mRptr = mWptr-30;
-        if (mRptr<0) mRptr += mRing;
-        mRptr %= mRing;
-        memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
-        return false;
-    }
+    // std::cout << "byteRingBufferPull ";
+    // simple version of mBufferStrategy 1,2
+    // int nextRcvSeqToUse = mLastRcvSeqUsed + 1;
+    // nextRcvSeqToUse %= 65536;
+    // int lost = nextRcvSeqToUse - mRcvSeq;
+    // std::cout << "lost " << lost << "\n";
+    // mCadence = 0;
+
+
+    // mRptr = mWptr;
+    // if (mRptr<0) mRptr += mRing;
+    // mRptr %= mRing;
+    // memcpy(mByteTmpAudioBuf, mByteRingBuffer[mRptr], Hapitrip::as.audioDataLen); // audio output of next ring buffer slot
+    bool glitch = (mLastRcvSeq == mRcvSeq);
+    mLastRcvSeq = mRcvSeq;
+    return glitch;
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
@@ -330,7 +336,9 @@ void UDP::readPendingDatagrams() { // incoming is triggered from readyRead signa
         int8_t *audioBuf = (int8_t *)(mRcvPacket.data() + sizeof(HeaderStruct));
         //            mTest->sineTest((MY_TYPE *)audioBuf); // output sines
         //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio signal
-        byteRingBufferPush(audioBuf, rcvSeq);
+        if (true) byteRingBufferPush(audioBuf, rcvSeq);
+        else std::cout << "************ losing " << rcvSeq << "\n";
+
     }
 }
 
@@ -427,9 +435,12 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 { // xxx
     mUdp->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
 
-    mTestPLC->zeroTmpFloatBuf();
+
+    // mTestPLC->zeroTmpFloatBuf();
     bool glitch = mUdp->byteRingBufferPull();
-    mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+    // cout << mTestPLC->mPcnt << "\t" << glitch << "\n";
+    mTest->sineTest((MY_TYPE *)inputBuffer);
+    mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
     mTestPLC->burg( glitch );
     mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
     mTestPLC->mPcnt++;
@@ -701,6 +712,7 @@ Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
         fakeNow[i] = tmp;
         fakeNowPhasor += fakeNowPhasorInc;
     }
+    lastWasGlitch = false;
 }
 
 TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
@@ -729,7 +741,6 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
         mFadeUp[i]   = (double)i / (double)fpp;
         mFadeDown[i] = 1.0 - mFadeUp[i];
     }
-    lastWasGlitch = false;
     ba = new BurgAlgorithm( upToNow );
 }
 //xxx
@@ -748,7 +759,7 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
         }
 
         for ( int s = 0; s < fpp; s++ ) c->realNowPacket[s] = (!glitch) ? c->mTmpFloatBuf[s] : 0.0;
-        // for ( int s = 0; s < fpp; s++ ) realNowPacket[s] = (!glitch) ? c->fakeNow[s] : 0.0;
+        // for ( int s = 0; s < fpp; s++ ) c->realNowPacket[s] = (!glitch) ? c->fakeNow[s] : 0.0;
         // keep history of generated signal
         if (!glitch) {
             for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->realNowPacket[s];
@@ -769,8 +780,8 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                     c->predictedPast[s/fpp][s%fpp];
             ba->train( c->coeffs,
                       // fakePast
-                      (lastWasGlitch) ? c->prediction : c->realPast
-                      , mPcnt, upToNow );
+                      (c->lastWasGlitch) ? c->prediction : c->realPast
+                      , upToNow );
             ba->predict( c->coeffs, c->prediction );
             // if (pCnt < 200) for ( int s = 0; s < 3; s++ )
             //         cout << pCnt << "\t" << s << "---"
@@ -784,13 +795,15 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                 ((glitch) ?
                      ( (mPcnt < packetsInThePast) ? 0.0 : c->predictedNowPacket[s] )
                           :
-                     ( (lastWasGlitch) ?
+                     ( (c->lastWasGlitch) ?
                           ( mFadeDown[s] * c->futurePredictedPacket[s] + mFadeUp[s] * c->realNowPacket[s] )
                                       : c->realNowPacket[s] ));
-
+        if (glitch) {
+            c->mTmpFloatBuf[0] = -0.9;
+        }
         // for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->fakeNow[s];
 
-        lastWasGlitch = glitch;
+        c->lastWasGlitch = glitch;
 
         for ( int i = 0; i < packetsInThePast - 2; i++ ) {
             for ( int s = 0; s < fpp; s++ ) c->predictedPast[i][s] =
@@ -840,8 +853,8 @@ void Channel::ringBufferPush() { // push received packet to ring
 void Channel::ringBufferPull(int past) { // pull numbered packet from ring
     // bool priming = ((mPcnt - past) < 0); checked outside
     // if (!priming) {
-        int pastPtr = mWptr - past;
-        if (pastPtr < 0) pastPtr += mRing;
-        mTmpFloatBuf = mPacketRing[pastPtr];
+    int pastPtr = mWptr - past;
+    if (pastPtr < 0) pastPtr += mRing;
+    mTmpFloatBuf = mPacketRing[pastPtr];
     // } else cout << "ring buffer not primed\n";
 }

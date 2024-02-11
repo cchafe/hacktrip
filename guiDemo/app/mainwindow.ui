@@ -150,6 +150,11 @@
      </property>
      <item>
       <property name="text">
+       <string>cmn9.stanford.edu</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>localhost</string>
       </property>
      </item>
@@ -171,11 +176,6 @@
      <item>
       <property name="text">
        <string>15.220.17.94</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>cmn9.stanford.edu</string>
       </property>
      </item>
      <item>

@@ -9,7 +9,7 @@ class BurgAlgorithm
 {
 public:
     BurgAlgorithm( size_t size );
-    void train(vector<DBL> &coeffs, const vector<float> &x, int pCnt, size_t size);
+    void train(vector<DBL> &coeffs, const vector<float> &x, size_t size);
     void predict( vector<DBL> &coeffs, vector<float> &predicted );
 private:
     size_t m;

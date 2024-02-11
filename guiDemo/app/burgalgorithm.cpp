@@ -47,7 +47,7 @@ BurgAlgorithm::BurgAlgorithm( size_t size )
 }
 
 // from .pl
-void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, int pCnt, size_t size )
+void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t size )
 {
 
 
@@ -84,9 +84,9 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, int pCnt,
     //    $Dk -= $f[0] ** 2 + $B[$#x] ** 2;
 
     //    qDebug() << "Dk" << qStringFromLongDouble1(Dk);
-    if ( classify(Dk) )
-    { qDebug() << pCnt << "init";
-    }
+    // if ( classify(Dk) )
+    // { qDebug() << pCnt << "init";
+    // }
 
     // BURG RECURSION
     for ( size_t k = 0; k < m; k++ )
@@ -99,9 +99,9 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, int pCnt,
         }
 
         if ( Dk == 0.0 ) Dk = 0.0000001; // from online testing
-        if ( classify(Dk) )
-        { qDebug() << pCnt << "run";
-        }
+        // if ( classify(Dk) )
+        // { qDebug() << pCnt << "run";
+        // }
         mu *= -2.0 / Dk;
         //            if ( isnan(Dk) )  { qDebug() << "k" << k; }
 

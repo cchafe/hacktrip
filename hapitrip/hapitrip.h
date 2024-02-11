@@ -95,6 +95,7 @@ private:
     double fakeNowPhasor;
     vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
     vector<float> mZeros;
+    bool lastWasGlitch;
     friend class TestPLC;
 };
 
@@ -122,7 +123,6 @@ private:
     int beyondNow; // duration
     vector<float> mFadeUp;
     vector<float> mFadeDown;
-    bool lastWasGlitch;
     Time * time;
     float scale;
     float invScale;
@@ -167,13 +167,13 @@ public:
     Regulator * mReg3; // bufstrategy 3, separate thread
     Regulator * mReg4; // bufstrategy 4
     int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
+    std::vector<int> mSeqRingBuffer; // seq num ring buffer
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
     int mRptr; // ring buffer read pointer
     int mRing; // ring buffer length in number of packets
     std::vector<int8_t *> mByteRingBuffer; // ring buffer
-    std::vector<int> mSeqRingBuffer; // seq num ring buffer
     std::vector<double> mArrivalRingBuffer; // seq num ring buffer
     QHostAddress serverHostAddress; // peer
     int mPeerUdpPort = 0; // ephemeral peer audio port given by peer
@@ -181,6 +181,7 @@ private:
     QByteArray mRcvPacket; // the incoming packet
     QByteArray mSendPacket; // the outgoing packet
     int mRcvSeq; // sequence number read from the header of the ingoing packet
+    int mLastRcvSeq; // outgoing to audio
     int mSendSeq; // sequence number written in the header for the outgoing packet
     QElapsedTimer mRcvTimer; // for rcvElapsedTime
     TestAudio *mTest; // in case test points are needed
