@@ -18,11 +18,25 @@ void errorCallback( RtAudioErrorType /*type*/, const std::string &errorText )
     if(gVerboseFlag == 2)    std::cerr << "\nerrorCallback: " << errorText << "\n\n";
 }
 
+Hapitrip::Hapitrip() {
+#ifndef AUDIO_ONLY
+    mTcp = nullptr;
+    mUdp = nullptr;
+#endif
+}
+
+Hapitrip::~Hapitrip() {
+#ifndef AUDIO_ONLY
+    if (mTcp == nullptr) delete mTcp;
+    if (mUdp == nullptr) delete mUdp;
+#endif
+}
+
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifdef AUDIO_ONLY
     mAudio.setTest(as.channels);
     mAudio.setTestPLC(as.channels,
-                      as.FPP, 16, 2);
+                      as.FPP, 16, 2); // packetsInThePast
     return 1; // AUDIO_ONLY still needs connectToServer which needs to return non-zero
 #else
     as.server = server; // set the server
@@ -116,7 +130,17 @@ int TCP::connectToServer() { // this is the TCP handshake
     return peerUdpPort;
 }
 
-UDP::UDP(QString server) : mServer(server) {};
+UDP::UDP(QString server) : mServer(server) {
+    mTest = nullptr;
+    mReg4 = nullptr;
+};
+
+UDP::~UDP() {
+    for (int i = 0; i < mRing; i++) delete[] mByteRingBuffer[i];
+    delete[] mByteTmpAudioBuf;
+    if (mTest != nullptr) delete mTest;
+    // if (mReg4 != nullptr) delete mReg4; // delete is broken
+}
 
 void UDP::start() {
     // init the JackTrip header struct
@@ -225,11 +249,6 @@ void UDP::start() {
 // sudo lsof -i -P -n
 // sudo watch ss -tulpn
 
-UDP::~UDP() {
-    for (int i = 0; i < mRing; i++) delete mByteRingBuffer[i];
-    delete mByteTmpAudioBuf;
-    //    delete reg; // don't delete if unused?
-}
 
 void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     double elapsed = (double)mRcvTimer.nsecsElapsed() / 1000000.0;
@@ -440,16 +459,21 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     // bool glitch = mUdp->byteRingBufferPull();
     // if(glitch) cout << mTestPLC->mPcnt << ", ";
 
-    bool glitch = mTestPLC->mPcnt % mTestPLC->lateMod == mTestPLC->late[mTestPLC->latePtr];
+    bool glitch = (mTestPLC->mPcnt % mTestPLC->lateMod)
+                  == (mTestPLC->late[mTestPLC->latePtr % mTestPLC->late.size()] - 39);
     if (!(mTestPLC->mPcnt % mTestPLC->lateMod)) mTestPLC->latePtr = 0;
-    if (glitch ){
+    if (glitch) {
         mTestPLC->latePtr++;
         mTestPLC->latePtr = mTestPLC->latePtr % mTestPLC->lateMod;
     }
+    if (mTestPLC->mPcnt == 0) glitch = false; // don't glitch on first packet in testing
+
     mTest->sineTest((MY_TYPE *)inputBuffer);
+
     mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
     mTestPLC->burg( glitch );
     mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
+
     mTestPLC->mPcnt++;
 
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
@@ -461,6 +485,17 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 #endif
 
 #ifndef NO_AUDIO
+Audio::Audio() {
+    mTest = nullptr;
+    mTestPLC = nullptr;
+    m_adac = nullptr;
+}
+
+Audio::~Audio() {
+    if (mTest != nullptr) delete mTest;
+    if (mTestPLC != nullptr) delete mTestPLC;
+    if (m_adac != nullptr) delete m_adac;
+}
 
 bool Audio::start() {
     m_streamTimePrintIncrement = 1.0; // seconds -- (unused) from RtAudio examples/duplex
@@ -631,15 +666,15 @@ void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert 
     }
 }
 
-void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bufferfull and convert to short int
-    for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
-        for (int i = 0; i < Hapitrip::as.FPP; i++) {
-            double tmpIn = ((MY_TYPE)*in++) * Hapitrip::as.invScale;
-            double tmpOut = (glitch) ? 0.0 : tmpIn;
-            *out++ = (MY_TYPE)(tmpOut * Hapitrip::as.scale);
-        }
-    }
-}
+// void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bufferfull and convert to short int
+//     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
+//         for (int i = 0; i < Hapitrip::as.FPP; i++) {
+//             double tmpIn = ((MY_TYPE)*in++) * Hapitrip::as.invScale;
+//             double tmpOut = (glitch) ? 0.0 : tmpIn;
+//             *out++ = (MY_TYPE)(tmpOut * Hapitrip::as.scale);
+//         }
+//     }
+// }
 
 // int Audio::wrapperProcessCallback(void *outputBuffer, void *inputBuffer, // shim to format UDP callback method
 //                                   unsigned int nBufferFrames, double streamTime,
@@ -668,6 +703,7 @@ void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate
 //     return 0;
 // }
 
+
 #define NOW (pCnt * fpp) // incrementing time
 Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
     predictedNowPacket.resize( fpp );
@@ -683,33 +719,35 @@ Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
 
     realPast.resize( upToNow );
     for (int i = 0; i < upToNow; i++) realPast[i] = 0.0;
-    for (int i = 0; i < packetsInThePast + 1; i++) {
-        vector<float> tmp(fpp);
-        for (int j = 0; j < fpp; j++) tmp[j] = 0.0;
-        mPacketRing.push_back(tmp);
-    }
-    for (int i = 0; i < packetsInThePast; i++) {
+    zeroPast.resize( upToNow );
+    for (int i = 0; i < upToNow; i++) zeroPast[i] = 1.0;
+
+    for (int i = 0; i < packetsInThePast; i++) { // don't resize, using push_back
         vector<float> tmp(fpp);
         for (int j = 0; j < fpp; j++) tmp[j] = 0.0;
         predictedPast.push_back(tmp);
     }
+
     coeffs.resize( upToNow - 1 );
     for (int i = 0; i < upToNow - 1; i++) {
         coeffs[i] = 0.0;
     }
-    prediction.resize( coeffs.size() + fpp * 2 );
-    for (size_t i = 0; i < coeffs.size() + fpp * 2; i++) {
+
+    prediction.resize( upToNow + fpp * 2 );
+    for (int i = 0; i < upToNow + fpp * 2; i++) {
         prediction[i] = 0.0;
     }
+
     // setup ring buffer
     mRing = packetsInThePast;
     mWptr = mRing / 2;
     // mRptr = mWptr - 2;
-    for (int i = 0; i < mRing; i++) {
+    for (int i = 0; i < mRing; i++) { // don't resize, using push_back
         vector<float> tmp(fpp);
         for (int j = 0; j < fpp; j++) tmp[j] = 0.0;
         mPacketRing.push_back(tmp);
     }
+
     fakeNow.resize( fpp );
     fakeNowPhasor = 0.0;
     fakeNowPhasorInc = 0.22;
@@ -726,14 +764,14 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     : channels(chans), fpp(fpp), bps(bps), packetsInThePast(packetsInThePast)
 {
     mPcnt = 0;
-    time = new Time();
-    time->start();
+    mTime = new Time();
+    mTime->start();
     if (bps == 16) {
         scale = 32767.0;
         invScale = 1.0 / 32767.0;
     } else cout << "bps != 16 -- add code\n";
     //////////////////////////////////////
-    packetsInThePast = 2;
+
     upToNow = packetsInThePast * fpp; // duration
     beyondNow = (packetsInThePast + 1) * fpp; // duration
 
@@ -742,24 +780,35 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
         mChanData[ch] = new Channel ( fpp, upToNow, packetsInThePast );
         mChanData[ch]->fakeNowPhasorInc = 0.11 + 0.03 * ch;
     }
+
     mFadeUp.resize( fpp );
     mFadeDown.resize( fpp );
     for (int i = 0; i < fpp; i++) {
         mFadeUp[i]   = (double)i / (double)fpp;
         mFadeDown[i] = 1.0 - mFadeUp[i];
     }
+
     ba = new BurgAlgorithm( upToNow );
-    late = vector<int>{ 39, 65, 66, 67, 80, 82, 87, 89, 94, 103, 104, 105, 124, 134, 143, 144, 150, 166, 180, 181, 182, 184, 218, 219, 220, 222, 239, 244, 250, 255, 256, 257, 258, 260, 264, 269, 276, 280, 294, 295, 296, 297, 299, 311, 321, 326, 331, 334, 335, 336, 337, 345, 347, 351, 357, 362, 365, 367, 371, 372, 373, 374, 377, 383, 387, 390, 392, 397, 402, 405, 409, 410, 411, 412, 416, 419, 421, 423, 425, 433, 448, 449, 450, 451, 487, 488, 489, 490, 499, 513, 516, 518, 524, 525, 529, 531, 532, 534, 535, 537, 538, 551, 564, 565, 566, 567, 602, 603, 604, 627, 640, 641, 642, 643, 653, 662, 673, 679, 680, 681, 684, 685, 686, 692, 693, 694, 704, 717, 718, 719, 720, 722, 730, 750, 756, 757, 758, 760, 768, 794, 796, 797, 805, 811, 820, 826, 833, 834, 835, 871, 872, 873, 874, 875, 876, 877, 909, 910, 911, 913, 941, 948, 949, 950, 952, 986, 987, 988, 1024, 1025, 1026, 1027, 1028, 1063, 1064, 1065, 1067, 1096, 1101, 1102, 1103, 1105, 1140, 1141, 1142, 1178, 1179, 1180, 1181, 1207, 1212, 1216, 1217, 1218, 1219, 1253, 1255, 1256, 1257, 1258, 1293, 1294, 1295, 1296, 1298, 1299, 1316, 1331, 1332, 1333, 1334, 1344, 1370, 1371, 1372, 1374, 1375, 1380, 1382, 1386, 1395, 1408, 1409, 1410, 1411, 1413, 1414, 1441, 1442, 1447, 1448, 1449, 1451, 1461, 1485, 1487, 1488, 1522, 1523, 1524, 1525, 1526, 1528, 1562, 1563, 1564, 1565, 1588, 1600, 1601, 1602, 1603, 1612, 1639, 1640, 1641, 1642, 1643, 1675, 1677, 1678, 1679, 1680, 1716, 1717, 1718, 1720, 1728, 1754, 1755, 1756, 1757, 1776, 1792, 1793, 1794, 1795, 1818, 1831, 1832, 1833, 1835, 1843, 1869, 1870, 1871, 1872, 1908, 1909, 1910, 1912, 1934, 1946, 1947, 1948, 1949, 1970, 1982, 1984, 1985, 1986, 1987, 1989};
-    lateMod = 100; // late.size();
+
+    // late = vector<int>{ 42, 44, 46, 48  };
+    // lateMod = 45;
+    // big gap
+    late = vector<int>{ 39, 65, 66, 67, 80, 82, 87, 89, 94, 103, 104, 105, 124, 134,
+                       143, 144, 145, 146, 147, 148, 149, 150, 166, 180, 181, 182, 184, 218, 219, 220, 222, 239, 244, 250, 255, 256, 257, 258, 260, 264, 269, 276, 280, 294, 295, 296, 297, 299, 311, 321, 326, 331, 334, 335, 336, 337, 345, 347, 351, 357, 362, 365, 367, 371, 372, 373, 374, 377, 383, 387, 390, 392, 397, 402, 405, 409, 410, 411, 412, 416, 419, 421, 423, 425, 433, 448, 449, 450, 451, 487, 488, 489, 490, 499, 513, 516, 518, 524, 525, 529, 531, 532, 534, 535, 537, 538, 551, 564, 565, 566, 567, 602, 603, 604, 627, 640, 641, 642, 643, 653, 662, 673, 679, 680, 681, 684, 685, 686, 692, 693, 694, 704, 717, 718, 719, 720, 722, 730, 750, 756, 757, 758, 760, 768, 794, 796, 797, 805, 811, 820, 826, 833, 834, 835, 871, 872, 873, 874, 875, 876, 877, 909, 910, 911, 913, 941, 948, 949, 950, 952, 986, 987, 988, 1024, 1025, 1026, 1027, 1028, 1063, 1064, 1065, 1067, 1096, 1101, 1102, 1103, 1105, 1140, 1141, 1142, 1178, 1179, 1180, 1181, 1207, 1212, 1216, 1217, 1218, 1219, 1253, 1255, 1256, 1257, 1258, 1293, 1294, 1295, 1296, 1298, 1299, 1316, 1331, 1332, 1333, 1334, 1344, 1370, 1371, 1372, 1374, 1375, 1380, 1382, 1386, 1395, 1408, 1409, 1410, 1411, 1413, 1414, 1441, 1442, 1447, 1448, 1449, 1451, 1461, 1485, 1487, 1488, 1522, 1523, 1524, 1525, 1526, 1528, 1562, 1563, 1564, 1565, 1588, 1600, 1601, 1602, 1603, 1612, 1639, 1640, 1641, 1642, 1643, 1675, 1677, 1678, 1679, 1680, 1716, 1717, 1718, 1720, 1728, 1754, 1755, 1756, 1757, 1776, 1792, 1793, 1794, 1795, 1818, 1831, 1832, 1833, 1835, 1843, 1869, 1870, 1871, 1872, 1908, 1909, 1910, 1912, 1934, 1946, 1947, 1948, 1949, 1970, 1982, 1984, 1985, 1986, 1987, 1989};
+    lateMod = late.size();
+    // late = vector<int>{ 39, 65, 66, 67, 80, 82, 87, 89, 94, 103, 104, 105, 124, 134,
+    //                    143, 144, 150, 166, 180, 181, 182, 184, 218, 219, 220, 222, 239, 244, 250, 255, 256, 257, 258, 260, 264, 269, 276, 280, 294, 295, 296, 297, 299, 311, 321, 326, 331, 334, 335, 336, 337, 345, 347, 351, 357, 362, 365, 367, 371, 372, 373, 374, 377, 383, 387, 390, 392, 397, 402, 405, 409, 410, 411, 412, 416, 419, 421, 423, 425, 433, 448, 449, 450, 451, 487, 488, 489, 490, 499, 513, 516, 518, 524, 525, 529, 531, 532, 534, 535, 537, 538, 551, 564, 565, 566, 567, 602, 603, 604, 627, 640, 641, 642, 643, 653, 662, 673, 679, 680, 681, 684, 685, 686, 692, 693, 694, 704, 717, 718, 719, 720, 722, 730, 750, 756, 757, 758, 760, 768, 794, 796, 797, 805, 811, 820, 826, 833, 834, 835, 871, 872, 873, 874, 875, 876, 877, 909, 910, 911, 913, 941, 948, 949, 950, 952, 986, 987, 988, 1024, 1025, 1026, 1027, 1028, 1063, 1064, 1065, 1067, 1096, 1101, 1102, 1103, 1105, 1140, 1141, 1142, 1178, 1179, 1180, 1181, 1207, 1212, 1216, 1217, 1218, 1219, 1253, 1255, 1256, 1257, 1258, 1293, 1294, 1295, 1296, 1298, 1299, 1316, 1331, 1332, 1333, 1334, 1344, 1370, 1371, 1372, 1374, 1375, 1380, 1382, 1386, 1395, 1408, 1409, 1410, 1411, 1413, 1414, 1441, 1442, 1447, 1448, 1449, 1451, 1461, 1485, 1487, 1488, 1522, 1523, 1524, 1525, 1526, 1528, 1562, 1563, 1564, 1565, 1588, 1600, 1601, 1602, 1603, 1612, 1639, 1640, 1641, 1642, 1643, 1675, 1677, 1678, 1679, 1680, 1716, 1717, 1718, 1720, 1728, 1754, 1755, 1756, 1757, 1776, 1792, 1793, 1794, 1795, 1818, 1831, 1832, 1833, 1835, 1843, 1869, 1870, 1871, 1872, 1908, 1909, 1910, 1912, 1934, 1946, 1947, 1948, 1949, 1970, 1982, 1984, 1985, 1986, 1987, 1989};
+    // lateMod = late.size();
     latePtr = 0;
+    mNotTrained = 0;
 }
-//xxx
+
 void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
     bool primed = mPcnt > packetsInThePast;
     for (int ch = 0; ch < channels; ch++) {
         Channel * c = mChanData[ch];
         //////////////////////////////////////
-        if (glitch) time->trigger();
+        if (glitch) mTime->trigger();
 
         for (int i = 0; i < fpp; i++) {
             double tmp = sin( c->fakeNowPhasor );
@@ -788,10 +837,21 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
         if (glitch) {
             for ( int s = 0; s < upToNow; s++ ) c->prediction[s] =
                     c->predictedPast[s/fpp][s%fpp];
-            ba->train( c->coeffs,
-                      // fakePast
-                      (c->lastWasGlitch) ? c->prediction : c->realPast
-                      , upToNow );
+            // for ( int s = 0; s < upToNow; s++ ) c->prediction[s] = (s%fpp) ?
+            //                            c->predictedPast[s/fpp][s%fpp]
+            //                            : 0.5;
+            // if (!(mNotTrained%100))
+            {
+                ba->train( c->coeffs,
+                          // c->realPast
+                          c->prediction
+                          // (c->lastWasGlitch) ? c->prediction : c->realPast
+                          , upToNow );
+                cout << "\ncoeffs ";
+            }
+            // if (mNotTrained < 2) c->coeffs[0] = 0.9;
+            mNotTrained++;
+
             ba->predict( c->coeffs, c->prediction );
             // if (pCnt < 200) for ( int s = 0; s < 3; s++ )
             //         cout << pCnt << "\t" << s << "---"
@@ -803,38 +863,48 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
 
         for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->outputNowPacket[s] =
                 ((glitch) ?
-                     ( (mPcnt < packetsInThePast) ? 0.0 : c->predictedNowPacket[s] )
+                     ( (primed) ? c->predictedNowPacket[s] : 0.0 )
                           :
                      ( (c->lastWasGlitch) ?
                           ( mFadeDown[s] * c->futurePredictedPacket[s] + mFadeUp[s] * c->realNowPacket[s] )
                                          : c->realNowPacket[s] ));
 
-        for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->coeffs[s];
-        if (glitch) {
-            c->mTmpFloatBuf[0] = -0.7;
-            c->mTmpFloatBuf[1] = -0.7;
-            c->mTmpFloatBuf[2] = -0.7;
-            c->mTmpFloatBuf[3] = -0.7;
-            c->mTmpFloatBuf[4] = -0.7;
-        }
+        for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->outputNowPacket[s];
+        //         (c->lastWasGlitch) ? c->prediction[s] : c->realPast[s];
+        // for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->coeffs[s + 0*fpp];
+        // for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->prediction[upToNow + s];
 
         c->lastWasGlitch = glitch;
 
-        for ( int i = 0; i < packetsInThePast - 2; i++ ) {
+        for ( int i = 0; i < packetsInThePast - 1; i++ ) {
             for ( int s = 0; s < fpp; s++ ) c->predictedPast[i][s] =
                     c->predictedPast[i + 1][s];
         }
         for ( int s = 0; s < fpp; s++ ) c->predictedPast[packetsInThePast - 1][s] =
                 c->outputNowPacket[s];
 
-        for ( int s = 0; s < fpp; s++ ) c->futurePredictedPacket[s] =
-                c->prediction[beyondNow + s];
+        if (false) for ( int i = 0; i < packetsInThePast - 1; i++ ) {
+                for ( int s = 0; s < fpp; s++ ) c->predictedPast[i][s] =
+                        c->prediction[(i + 1) * fpp + s];
+            }
+
+        for ( int s = 0; s < fpp; s++ ) {
+            c->futurePredictedPacket[s] =
+                c->prediction[beyondNow + s - 0];
+            // earlier bug was heap overflow because of smaller coeffs size, so -1 was ok, now prediction is larger
+        }
         //////////////////////////////////////
 
-        if (glitch) time->collect();
+        if (glitch) mTime->collect();
     }
     if (Hapitrip::as.verbose)
-        if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
+        if (!(mPcnt%300)) std::cout << "avg " << mTime->avg() << " \n";
+}
+
+TestPLC::~TestPLC(){
+    delete mTime;
+    for (int ch = 0; ch < channels; ch++) delete mChanData[ch];
+    delete ba;
 }
 
 void TestPLC::zeroTmpFloatBuf() {

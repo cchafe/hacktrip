@@ -4,8 +4,7 @@
 #include "hapitrip_global.h"
 #include "../guiDemo/app/burgalgorithm.h"
 
-using namespace std; // for vector for TestPLC burg
-
+using namespace std;
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
 
@@ -79,29 +78,32 @@ public:
     void ringBufferPush();
     void ringBufferPull(int past);
     double fakeNowPhasorInc;
-private:
+    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
+    vector<float> prediction;
     vector<float> predictedNowPacket;
     vector<float> realNowPacket;
     vector<float> outputNowPacket;
     vector<float> futurePredictedPacket;
     vector<float> realPast;
+    vector<float> zeroPast;
     vector<vector<float>> predictedPast;
     vector<float> coeffs;
-    vector<float> prediction;
     vector<vector<float>> mPacketRing;
     int mWptr;
     int mRing;
     vector<float> fakeNow;
     double fakeNowPhasor;
-    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
     vector<float> mZeros;
     bool lastWasGlitch;
+private:
     friend class TestPLC;
 };
 
 class TestPLC { // for insertion in test points
 public:
     TestPLC(int chans, int fpp, int bps, int packetsInThePast);
+    ~TestPLC();
+    Time *mTime;
     // int audioCallback(void *outputBuffer, void *inputBuffer,
     //                   unsigned int nBufferFrames, double streamTime,
     //                   RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
@@ -116,7 +118,6 @@ public:
     vector<int> late;
     int lateMod;
     int latePtr;
-private:
     BurgAlgorithm *ba;
     int channels;
     int fpp;
@@ -126,9 +127,10 @@ private:
     int beyondNow; // duration
     vector<float> mFadeUp;
     vector<float> mFadeDown;
-    Time * time;
     float scale;
     float invScale;
+    int mNotTrained;
+private:
 };
 
 #ifndef AUDIO_ONLY
@@ -216,6 +218,8 @@ public:
 #ifndef NO_AUDIO
 class Audio {
 public:
+    Audio();
+    ~Audio();
     bool start();
     void stop();
     int audioCallback(void *outputBuffer, void *inputBuffer,
@@ -271,6 +275,7 @@ class APIsettings {
     constexpr static const double dScale = 32767.0;
     constexpr static const double dInvScale = 1.0 / 32767.0;
     static const int dNumberOfBuffersSuggestionToRtAudio = 2;
+    static const bool dVerbose = 0;
 #ifndef AUDIO_ONLY
     static const int dServerTcpPort = 4464;
     static const int dLocalAudioUdpPort = 4464;
@@ -283,7 +288,6 @@ class APIsettings {
         (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
-    static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
     static const bool dUsePLCthread = 0;
 #endif
@@ -299,6 +303,7 @@ private:
     double scale = dScale;
     double invScale = dInvScale;
     int numberOfBuffersSuggestionToRtAudio = dNumberOfBuffersSuggestionToRtAudio;
+    bool verbose = dVerbose;
 #ifndef AUDIO_ONLY
     int serverTcpPort = dServerTcpPort;
     int localAudioUdpPort = dLocalAudioUdpPort;
@@ -309,7 +314,6 @@ private:
     double packetPeriodMS = dPacketPeriodMS;
     int ringBufferLength = dRingBufferLength;
     int reportAfterPackets = dReportAfterPackets;
-    bool verbose = dVerbose;
     bool usePLC = dUsePLC;
     bool usePLCthread = dUsePLCthread;
 
@@ -329,6 +333,8 @@ private:
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
+    Hapitrip();
+    ~Hapitrip();
     int connectToServer(QString server); // initiate handshake and start listening for UDP incoming
     void run(); // initiate bidirectional flows, sending UDP outgoing to server starts it sending
     void stop(); // stop the works

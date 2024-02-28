@@ -5,6 +5,8 @@ include(../libregulator/libregulator.pri)
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
+# CONFIG+=sanitizer
+# CONFIG+=sanitize_address
 
 # for debug that sets -fsanitize=address and loads libasan
 # CONFIG += sanitizer sanitize_address
