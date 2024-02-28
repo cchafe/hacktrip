@@ -28,29 +28,39 @@ bool classify(double d)
     return tmp;
 }
 
-BurgAlgorithm::BurgAlgorithm( size_t size )
+BurgAlgorithm::BurgAlgorithm( size_t size ) // upToNow = packetsInThePast * fpp
 {
     // GET SIZE FROM INPUT VECTORS
     m = N = size - 1;
     this->size = size;
     if (size < m)
         qDebug() << "time_series should have more elements than the AR order is";
-    Ak.resize( m + 1 );
-    for (size_t i = 0; i < m + 1; i++)
-        Ak[i] = 0.0;
-    AkReset.resize( m + 1 );
+    Ak.resize( size );
+    for (size_t i = 0; i < size; i++) Ak[i] = 0.0;
+    AkReset.resize( size );
     AkReset = Ak;
     AkReset[ 0 ] = 1.0;
+
     f.resize(size);
     b.resize(size);
 
 }
 
 // from .pl
+// size = upToNow = packetsInThePast * fpp
+
+// coeffs.size() = upToNow - 1
+
+// operates on input with size of upToNow
+// prediction.size( upToNow - 1 + fpp * 2 )
+// or
+// realPast.size() = upToNow
+
+// Ak.size() = upToNow
+// m = N = upToNow - 1
+
 void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t size )
 {
-
-
     ////
 
     // INITIALIZE Ak
@@ -62,8 +72,8 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t si
 
     // INITIALIZE Dk
     DBL Dk = 0.0; // was double
-    for ( size_t j = 0; j <= N; j++ )
-    {
+    for ( size_t j = 0; j <= N; j++ ) {
+        // Dk += 2.000001 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
         // Dk += 2.5 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
         // Dk += 3.0 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
         Dk += 2.00002 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
