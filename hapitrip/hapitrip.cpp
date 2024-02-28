@@ -437,8 +437,15 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 
 
     // mTestPLC->zeroTmpFloatBuf();
-    bool glitch = mUdp->byteRingBufferPull();
-    // cout << mTestPLC->mPcnt << "\t" << glitch << "\n";
+    // bool glitch = mUdp->byteRingBufferPull();
+    // if(glitch) cout << mTestPLC->mPcnt << ", ";
+
+    bool glitch = mTestPLC->mPcnt % mTestPLC->lateMod == mTestPLC->late[mTestPLC->latePtr];
+    if (!(mTestPLC->mPcnt % mTestPLC->lateMod)) mTestPLC->latePtr = 0;
+    if (glitch ){
+        mTestPLC->latePtr++;
+        mTestPLC->latePtr = mTestPLC->latePtr % mTestPLC->lateMod;
+    }
     mTest->sineTest((MY_TYPE *)inputBuffer);
     mTestPLC->toFloatBuf((MY_TYPE *)inputBuffer);
     mTestPLC->burg( glitch );
@@ -742,6 +749,9 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
         mFadeDown[i] = 1.0 - mFadeUp[i];
     }
     ba = new BurgAlgorithm( upToNow );
+    late = vector<int>{ 39, 65, 66, 67, 80, 82, 87, 89, 94, 103, 104, 105, 124, 134, 143, 144, 150, 166, 180, 181, 182, 184, 218, 219, 220, 222, 239, 244, 250, 255, 256, 257, 258, 260, 264, 269, 276, 280, 294, 295, 296, 297, 299, 311, 321, 326, 331, 334, 335, 336, 337, 345, 347, 351, 357, 362, 365, 367, 371, 372, 373, 374, 377, 383, 387, 390, 392, 397, 402, 405, 409, 410, 411, 412, 416, 419, 421, 423, 425, 433, 448, 449, 450, 451, 487, 488, 489, 490, 499, 513, 516, 518, 524, 525, 529, 531, 532, 534, 535, 537, 538, 551, 564, 565, 566, 567, 602, 603, 604, 627, 640, 641, 642, 643, 653, 662, 673, 679, 680, 681, 684, 685, 686, 692, 693, 694, 704, 717, 718, 719, 720, 722, 730, 750, 756, 757, 758, 760, 768, 794, 796, 797, 805, 811, 820, 826, 833, 834, 835, 871, 872, 873, 874, 875, 876, 877, 909, 910, 911, 913, 941, 948, 949, 950, 952, 986, 987, 988, 1024, 1025, 1026, 1027, 1028, 1063, 1064, 1065, 1067, 1096, 1101, 1102, 1103, 1105, 1140, 1141, 1142, 1178, 1179, 1180, 1181, 1207, 1212, 1216, 1217, 1218, 1219, 1253, 1255, 1256, 1257, 1258, 1293, 1294, 1295, 1296, 1298, 1299, 1316, 1331, 1332, 1333, 1334, 1344, 1370, 1371, 1372, 1374, 1375, 1380, 1382, 1386, 1395, 1408, 1409, 1410, 1411, 1413, 1414, 1441, 1442, 1447, 1448, 1449, 1451, 1461, 1485, 1487, 1488, 1522, 1523, 1524, 1525, 1526, 1528, 1562, 1563, 1564, 1565, 1588, 1600, 1601, 1602, 1603, 1612, 1639, 1640, 1641, 1642, 1643, 1675, 1677, 1678, 1679, 1680, 1716, 1717, 1718, 1720, 1728, 1754, 1755, 1756, 1757, 1776, 1792, 1793, 1794, 1795, 1818, 1831, 1832, 1833, 1835, 1843, 1869, 1870, 1871, 1872, 1908, 1909, 1910, 1912, 1934, 1946, 1947, 1948, 1949, 1970, 1982, 1984, 1985, 1986, 1987, 1989};
+    lateMod = 100; // late.size();
+    latePtr = 0;
 }
 //xxx
 void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
@@ -797,11 +807,16 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                           :
                      ( (c->lastWasGlitch) ?
                           ( mFadeDown[s] * c->futurePredictedPacket[s] + mFadeUp[s] * c->realNowPacket[s] )
-                                      : c->realNowPacket[s] ));
+                                         : c->realNowPacket[s] ));
+
+        for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->coeffs[s];
         if (glitch) {
-            c->mTmpFloatBuf[0] = -0.9;
+            c->mTmpFloatBuf[0] = -0.7;
+            c->mTmpFloatBuf[1] = -0.7;
+            c->mTmpFloatBuf[2] = -0.7;
+            c->mTmpFloatBuf[3] = -0.7;
+            c->mTmpFloatBuf[4] = -0.7;
         }
-        // for ( int s = 0; s < fpp; s++ ) c->mTmpFloatBuf[s] = c->fakeNow[s];
 
         c->lastWasGlitch = glitch;
 
@@ -818,7 +833,8 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
 
         if (glitch) time->collect();
     }
-    if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
+    if (Hapitrip::as.verbose)
+        if (!(mPcnt%300)) std::cout << "avg " << time->avg() << " \n";
 }
 
 void TestPLC::zeroTmpFloatBuf() {

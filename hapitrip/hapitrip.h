@@ -113,6 +113,9 @@ public:
     int mPcnt;
     vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
     vector<Channel *> mChanData;
+    vector<int> late;
+    int lateMod;
+    int latePtr;
 private:
     BurgAlgorithm *ba;
     int channels;
@@ -280,7 +283,7 @@ class APIsettings {
         (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
-    static const bool dVerbose = 1;
+    static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
     static const bool dUsePLCthread = 0;
 #endif

@@ -64,6 +64,7 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t si
     DBL Dk = 0.0; // was double
     for ( size_t j = 0; j <= N; j++ )
     {
+        // Dk += 2.5 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
         // Dk += 3.0 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
         Dk += 2.00002 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
         // Dk += 2.00003 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
