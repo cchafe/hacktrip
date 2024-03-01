@@ -31,3 +31,8 @@ guiDemo/librtaudio/librtaudio.pri to use pipewire
 linux_sound = pipewire
 ...or comment that out with a # and get
 native jack backend by default
+
+plcDemo
+
+resembles guiDemo but it tests with plc whichis latest from git-burgClean/skeleton "clean" branch worked into a libplc and without libregulator
+
