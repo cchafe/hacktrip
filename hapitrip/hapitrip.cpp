@@ -6,7 +6,6 @@
 #include <ios>
 #include <iomanip>
 
-// RegulatorThread
 #include <QThread>
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
@@ -150,29 +149,10 @@ void UDP::start() {
     mTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen]; // for when not using an audio callback
     memset(mTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
 
-    mReg = new Regulator(Hapitrip::as.channels,
-                         Hapitrip::as.bytesPerSample,
-                         Hapitrip::as.FPP,
-                         -3, // qlen needs to be param
-                         Hapitrip::as.usePLCthread, // bool sets thread or not thread
-                         Hapitrip::as.scale, Hapitrip::as.invScale,
-                         Hapitrip::as.verbose,
-                         Hapitrip::as.audioDataLen);
 
     // always addd RegulatorThread even if unused
     // JackTrip is different, RegulatorThread only if bufstrategy 3, only settable at launch
     // HackTrip allows changes while running, so RegulatorThread needs to exist
-    if (true) {
-        mRegulatorThreadPtr = new QThread();
-        mRegulatorThreadPtr->setObjectName("RegulatorThread");
-        Regulator* regulatorPtr    = reinterpret_cast<Regulator*>(mReg);
-        RegulatorWorker* workerPtr = new RegulatorWorker(regulatorPtr);
-        workerPtr->moveToThread(mRegulatorThreadPtr);
-        QObject::connect(this, &UDP::signalReceivedNetworkPacket, workerPtr,
-                         &RegulatorWorker::pullPacket, Qt::QueuedConnection);
-        mRegulatorThreadPtr->start();
-        mRegulatorWorkerPtr = workerPtr;
-    }
 };
 // example system commands that show udp port in use in case of trouble starting
 // sudo lsof -i:4464
@@ -209,8 +189,10 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
 
 
     if (Hapitrip::as.usePLC)
-        mReg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
-    else {
+    {
+
+        // mReg->shimFPP(buf, Hapitrip::as.audioDataLen, seq); // where datalen should be incoming for shimmng
+    } else {
         memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
         mWptr++;
         mWptr %= mRing;
@@ -222,13 +204,7 @@ void UDP::ringBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push receiv
 // translates to ringBufferPull()
 
 void UDP::ringBufferPull() { // pull next packet to play out from regulator or ring
-    if (Hapitrip::as.usePLC) { // same as mBufferStrategy 3,4
-        mReg->readSlotNonBlocking(mTmpAudioBuf);
-        //    mTest->sineTest((MY_TYPE *)mTmpAudioBuf);
-        if (mReg->mBufferStrategy == 3) { // use RegulatorThread
-            emit signalReceivedNetworkPacket();
-        }
-    } else  { // simple version of mBufferStrategy 1,2
+{ // simple version of mBufferStrategy 1,2
         if (mRptr == mWptr) mRptr = mWptr - 2; // if there's an incoming packet stream underrun
         if (mRptr<0) mRptr += mRing;
         mRptr %= mRing;

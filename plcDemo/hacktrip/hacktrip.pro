@@ -1,4 +1,6 @@
-QT       += core gui
+QT       += core gui network
+include(../librtaudio/librtaudio.pri)
+include(../libhapitrip/libhapitrip.pri)
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -11,10 +13,12 @@ CONFIG+=sanitize_address
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    burgalgorithm.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
+    burgalgorithm.h \
     mainwindow.h
 
 FORMS += \
@@ -24,3 +28,6 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DEPENDPATH += . ../libhapitrip ../librtaudio
+

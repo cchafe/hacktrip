@@ -12,7 +12,6 @@
 #include "qobjectdefs.h"
 #endif
 
-#include "../regulator/regulator.h"
 
 #ifndef NO_AUDIO
 //#include <RtAudio.h> // if built from a hapitrip.pro and it's likelt inclusion of rtaudio.pri
@@ -77,7 +76,6 @@ public:
                       unsigned int nBufferFrames, double streamTime,
                       RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
 #endif
-    Regulator * mReg;
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -99,12 +97,12 @@ private:
     QString mServer; // peer address
 
 
-    /// thread used to pull packets from Regulator (if mBufferStrategy==3)
-    QThread* mRegulatorThreadPtr;
-    /// worker used to pull packets from Regulator (if mBufferStrategy==3)
-    QObject* mRegulatorWorkerPtr;
+    // /// thread used to pull packets from Regulator (if mBufferStrategy==3)
+    // QThread* mRegulatorThreadPtr;
+    // /// worker used to pull packets from Regulator (if mBufferStrategy==3)
+    // QObject* mRegulatorWorkerPtr;
 signals:
-    void signalReceivedNetworkPacket();
+    // void signalReceivedNetworkPacket();
 
 };
 
@@ -178,7 +176,6 @@ class APIsettings {
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
-    static const bool dUsePLCthread = 0;
 #endif
 
 private:
@@ -204,12 +201,10 @@ private:
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
     bool usePLC = dUsePLC;
-    bool usePLCthread = dUsePLCthread;
 
     QString server = NULL; // the server name or IP address
     friend class TCP;
     friend class UDP;
-    friend class Regulator;
     friend class StdDev;
 #endif
     friend class Audio;
@@ -247,13 +242,6 @@ public:
     int getUsePLC() { return as.usePLC; }
     void setUsePLC(int use) { as.usePLC = use; }
 
-    int getUsePLCthread() { return as.usePLCthread; }
-    void setUsePLCthread(int use) {
-        as.usePLCthread = use;
-        if (mUdp != nullptr)
-            mUdp->mReg->setUsePLCthread(use);
-    }
-
 #ifndef AUDIO_ONLY
     int getLocalUDPaudioPort() { return as.localAudioUdpPort; };
     void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; };
@@ -266,7 +254,6 @@ private:
 #ifndef AUDIO_ONLY
     friend class TCP;
     friend class UDP;
-    friend class Regulator;
     friend class StdDev;
     TCP * mTcp;
     UDP * mUdp;
