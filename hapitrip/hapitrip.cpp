@@ -160,8 +160,8 @@ void UDP::start() {
 // sudo watch ss -tulpn
 
 UDP::~UDP() {
-    for (int i = 0; i < mRing; i++) delete mRingBuffer[i];
-    delete mTmpAudioBuf;
+    for (int i = 0; i < mRing; i++) delete[] mRingBuffer[i];
+    delete[] mTmpAudioBuf;
     //    delete reg; // don't delete if unused?
 }
 
