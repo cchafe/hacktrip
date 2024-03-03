@@ -19,7 +19,7 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     delete mTcp; // done with TCP
     mUdp->setTest(as.channels); // in case of audio test points
 #ifndef NO_AUDIO
-    mAudio.setUdp(mUdp);
+    mAudio->setUdp(mUdp);
 #endif
 #endif
 #ifndef NO_AUDIO

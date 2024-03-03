@@ -6,7 +6,7 @@
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
 
-#define AUDIO_ONLY
+// #define AUDIO_ONLY
 #ifdef AUDIO_ONLY
 #include "qobject.h"
 #include "qobjectdefs.h"
