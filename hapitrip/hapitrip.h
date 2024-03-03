@@ -6,7 +6,7 @@
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
 
-//#define AUDIO_ONLY
+#define AUDIO_ONLY
 #ifdef AUDIO_ONLY
 #include "qobject.h"
 #include "qobjectdefs.h"
@@ -115,6 +115,13 @@ public:
 #ifndef NO_AUDIO
 class Audio {
 public:
+    Audio() {
+        m_adac = nullptr;
+    }
+    ~Audio() {
+        if (m_adac != nullptr)
+            delete m_adac;
+    }
     bool start();
     void stop();
     int audioCallback(void *outputBuffer, void *inputBuffer,
@@ -216,6 +223,13 @@ private:
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
+    Hapitrip() {
+        mAudio = new Audio;
+    }
+    ~Hapitrip() {
+        if (mAudio != nullptr) delete mAudio;
+        mAudio = nullptr;
+    }
     int connectToServer(QString server); // initiate handshake and start listening for UDP incoming
     void run(); // initiate bidirectional flows, sending UDP outgoing to server starts it sending
     void stop(); // stop the works
@@ -239,10 +253,10 @@ public:
     int getSampleRate() { return as.sampleRate; }
     void setSampleRate(int srate) { as.sampleRate = srate; }
 
+#ifndef AUDIO_ONLY
     int getUsePLC() { return as.usePLC; }
     void setUsePLC(int use) { as.usePLC = use; }
 
-#ifndef AUDIO_ONLY
     int getLocalUDPaudioPort() { return as.localAudioUdpPort; };
     void setLocalUDPaudioPort(int port) { as.localAudioUdpPort = port; };
 #endif
@@ -259,7 +273,7 @@ private:
     UDP * mUdp;
 #endif
 #ifndef NO_AUDIO
-    Audio mAudio;
+    Audio *mAudio;
 #endif
 };
 

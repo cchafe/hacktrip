@@ -23,9 +23,13 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #endif
 #endif
 #ifndef NO_AUDIO
-    mAudio.setTest(as.channels);
+    mAudio->setTest(as.channels);
 #endif
+#ifndef AUDIO_ONLY
     return mUdp->getPeerUdpPort();
+#else
+    return 1;
+#endif
 }
 
 void Hapitrip::run() { // hit this before server times out in like 10 seconds
@@ -33,8 +37,10 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     mUdp->start(); // bidirectional flows
 #endif
 #ifndef NO_AUDIO
-    if (mAudio.start()) {
+    if (mAudio->start()) {
+#ifndef AUDIO_ONLY
         mUdp->stop();
+#endif
     }
 #endif
 }
@@ -44,7 +50,7 @@ void Hapitrip::stop() { // the whole show
     mUdp->stop();
 #endif
 #ifndef NO_AUDIO
-    mAudio.stop();
+    mAudio->stop(); // xxx
 #endif
 #ifndef AUDIO_ONLY
     delete mUdp;
@@ -469,7 +475,7 @@ bool Audio::start() {
 }
 
 void Audio::stop() { // graceful audio shutdown
-    if (m_adac)
+    if (m_adac != nullptr)
         if (m_adac->isStreamRunning()) {
             std::cout << "\nAudio stream stop" << std::endl;
             m_adac->stopStream();
@@ -478,6 +484,13 @@ void Audio::stop() { // graceful audio shutdown
                 std::cout << "Audio stream closed" << std::endl;
             }
         }
+    while (m_adac->isStreamRunning()) {
+        std::cout << "\nAudio stream stopped? " << m_adac->isStreamRunning() << std::endl;
+        QThread::msleep(500);
+    }
+    std::cout << "\nAudio stream stopped? " << m_adac->isStreamRunning() << std::endl;
+    delete m_adac;
+    m_adac = nullptr;
 }
 #endif
 

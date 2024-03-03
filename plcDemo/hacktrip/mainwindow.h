@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QShortcut>
 #include "hapitrip.h"
 
 QT_BEGIN_NAMESPACE
@@ -23,6 +24,7 @@ private:
     Hapitrip *mHt;
     bool mConnected;
     QString mServer;
+    QShortcut *mQuitShortCut;
 
 private slots:
     void on_connectButton_clicked();

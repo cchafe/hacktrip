@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include <QShortcut>
 #include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -9,12 +8,12 @@ MainWindow::MainWindow(QWidget *parent)
 {
     mUi->setupUi(this);
     mHt = nullptr;
-    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q), this, SLOT(close()));
+    mQuitShortCut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q),
+                                  this, SLOT(close()));
 }
 
 MainWindow::~MainWindow() {
-    if (mHt != nullptr)
-        delete mHt;
+    delete mQuitShortCut;
     delete mUi;
 }
 
@@ -27,19 +26,25 @@ void MainWindow::on_connectButton_clicked() {
         QMessageBox msgBox;
         msgBox.setText("connection failed for " + mServer + "\n try another" );
         msgBox.exec();
+    } else {
+        if (mConnected) mHt->run();
     }
 }
 
 void MainWindow::on_runButton_clicked() {
-    if (mConnected) mHt->run();
+    if (mHt != nullptr) {
+        if (mConnected) mHt->run();
+    } else {
+        // mHt = new Hapitrip(); // edge case starting audio only
+        // mHt->connectToServer( QString("") );
+    }
 }
 
 void MainWindow::on_stopButton_clicked() {
-    if (mConnected) {
+    if (mHt != nullptr) {
         mHt->stop();
+        delete mHt;
     }
-    delete mHt;
-    mHt = nullptr;
     //  this->close();
 }
 
@@ -68,9 +73,11 @@ void MainWindow::on_audioComboBox_currentIndexChanged(int arg1)
     mHt->setRtAudioAPI(arg1); // takes effect after stop
 }
 
-void MainWindow::on_plcCheckBox_stateChanged(int arg1)
+void MainWindow::on_plcCheckBox_stateChanged([[maybe_unused]] int arg1)
 {
+#ifndef AUDIO_ONLY
     mHt->setUsePLC(arg1);
+#endif
 }
 
 void MainWindow::updateStateFromUI() {
@@ -78,6 +85,8 @@ void MainWindow::updateStateFromUI() {
     mHt->setFPP(mUi->FPPcomboBox->currentText().toInt());
     mHt->setChannels(mUi->channelsSpinBox->value());
     mHt->setSampleRate(mUi->srateComboBox->currentText().toInt());
+#ifndef AUDIO_ONLY
     mHt->setUsePLC(mUi->plcCheckBox->checkState());
+#endif
 };
 
