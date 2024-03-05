@@ -27,9 +27,7 @@ private:
     QShortcut *mQuitShortCut;
 
 private slots:
-    void on_connectButton_clicked();
-
-    void on_runButton_clicked();
+    void on_startButton_clicked();
 
     void on_stopButton_clicked();
 

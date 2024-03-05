@@ -17,7 +17,7 @@ MainWindow::~MainWindow() {
     delete mUi;
 }
 
-void MainWindow::on_connectButton_clicked() {
+void MainWindow::on_startButton_clicked() {
     mHt = new Hapitrip(); // APIstructure inits its params with its defaults
     updateStateFromUI(); // override params with initial UI values
     mConnected = false;
@@ -28,15 +28,6 @@ void MainWindow::on_connectButton_clicked() {
         msgBox.exec();
     } else {
         if (mConnected) mHt->run();
-    }
-}
-
-void MainWindow::on_runButton_clicked() {
-    if (mHt != nullptr) {
-        if (mConnected) mHt->run();
-    } else {
-        // mHt = new Hapitrip(); // edge case starting audio only
-        // mHt->connectToServer( QString("") );
     }
 }
 
