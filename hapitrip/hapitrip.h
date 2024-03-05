@@ -183,6 +183,7 @@ class APIsettings {
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
+    static const int dPacketsInThePast = 4;
 #endif
 
 private:
@@ -208,6 +209,7 @@ private:
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
     bool usePLC = dUsePLC;
+    int packetsInThePast = dPacketsInThePast;
 
     QString server = NULL; // the server name or IP address
     friend class TCP;
