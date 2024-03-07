@@ -73,9 +73,9 @@ void MainWindow::on_plcCheckBox_stateChanged([[maybe_unused]] int arg1)
 
 void MainWindow::updateStateFromUI() {
     mServer = mUi->serverComboBox->currentText();
-    mHt->setFPP(mUi->FPPcomboBox->currentText().toInt());
-    mHt->setChannels(mUi->channelsSpinBox->value());
-    mHt->setSampleRate(mUi->srateComboBox->currentText().toInt());
+    // mHt->setFPP(mUi->FPPcomboBox->currentText().toInt());
+    // mHt->setChannels(mUi->channelsSpinBox->value());
+    // mHt->setSampleRate(mUi->srateComboBox->currentText().toInt());
 #ifndef AUDIO_ONLY
     mHt->setUsePLC(mUi->plcCheckBox->checkState());
 #endif

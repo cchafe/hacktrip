@@ -12,7 +12,6 @@
 #include "qobjectdefs.h"
 #endif
 
-
 #ifndef NO_AUDIO
 //#include <RtAudio.h> // if built from a hapitrip.pro and it's likelt inclusion of rtaudio.pri
 #include <../../rtaudio/RtAudio.h> // if not
@@ -26,6 +25,10 @@
 #include <QUdpSocket>
 #endif
 
+#include <vector>
+using namespace std;
+#include "burgalgorithm.h"
+
 const QString gVersion = "0.3";
 
 typedef signed short MY_TYPE; // audio interface data is 16bit ints
@@ -38,6 +41,94 @@ public:
     void sineTest(MY_TYPE *buffer); // generate a signal
 private:
     std::vector<double> mPhasor; // multi-channel capable
+};
+class Time {
+    double accum = 0.0;
+    int cnt = 0;
+    double tmpTime = 0.0;
+public:
+    QElapsedTimer mCallbackTimer; // for rcvElapsedTime
+    void collect( ){
+        double tmp = (mCallbackTimer.nsecsElapsed() - tmpTime) / 1000000.0;
+        accum += tmp;
+        cnt++;
+    }
+    double instantElapsed( ){
+        return (mCallbackTimer.nsecsElapsed() - tmpTime) / 1000000.0;
+    }
+    double instantAbsolute( ){
+        return (mCallbackTimer.nsecsElapsed()) / 1000000.0;
+    }
+    double avg() {
+        if (!cnt) return 0.0;
+        double tmp = accum / (double)cnt;
+        accum = 0.0;
+        cnt = 0;
+        return tmp;
+    }
+    void start() { mCallbackTimer.start(); }
+    void trigger() { tmpTime = mCallbackTimer.nsecsElapsed(); }
+};
+
+class Channel {
+public:
+    Channel ( int fpp, int upToNow, int packetsInThePast );
+    void ringBufferPush();
+    void ringBufferPull(int past);
+    double fakeNowPhasorInc;
+    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
+    vector<float> prediction;
+    vector<float> predictedNowPacket;
+    vector<float> realNowPacket;
+    vector<float> outputNowPacket;
+    vector<float> futurePredictedPacket;
+    vector<float> realPast;
+    vector<float> zeroPast;
+    vector<vector<float>> predictedPast;
+    vector<float> coeffs;
+    vector<vector<float>> mPacketRing;
+    int mWptr;
+    int mRing;
+    vector<float> fakeNow;
+    double fakeNowPhasor;
+    vector<float> mZeros;
+    bool lastWasGlitch;
+private:
+    friend class TestPLC;
+};
+
+class TestPLC { // for insertion in test points
+public:
+    TestPLC(int chans, int fpp, int bps, int packetsInThePast);
+    ~TestPLC();
+    Time *mTime;
+    // int audioCallback(void *outputBuffer, void *inputBuffer,
+    //                   unsigned int nBufferFrames, double streamTime,
+    //                   RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
+    void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
+    void burg(bool glitch); // generate a signal
+    void zeroTmpFloatBuf();
+    void toFloatBuf(MY_TYPE *in);
+    void fromFloatBuf(MY_TYPE *out);
+    int mPcnt;
+    vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
+    vector<Channel *> mChanData;
+    vector<int> late;
+    int lateMod;
+    int latePtr;
+    BurgAlgorithm *ba;
+    int channels;
+    int fpp;
+    int bps;
+    int packetsInThePast;
+    int upToNow; // duration
+    int beyondNow; // duration
+    vector<float> mFadeUp;
+    vector<float> mFadeDown;
+    float scale;
+    float invScale;
+    int mNotTrained;
+private:
 };
 
 #ifndef AUDIO_ONLY
@@ -69,13 +160,11 @@ public:
     // for non-audio callback triggering of audio rcv and send e.g., chuck
     void rcvAudioData(float *buf); // readPendingDatagrams into ring and pull next packet from ring
     void sendAudioData(float *buf); // convert one bufferfull to short int and send out
-    void ringBufferPush(int8_t *buf, int seq); // push received packet to ring
-    void ringBufferPull(); // pull next packet to play out from ring put in mTmpAudioBuf
-#ifndef NO_AUDIO
-    int audioCallback(void *outputBuffer, void *inputBuffer,
-                      unsigned int nBufferFrames, double streamTime,
-                      RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
-#endif
+    void byteRingBufferPush(int8_t *buf, int seq); // push received packet to ring
+    bool byteRingBufferPull(); // pull next packet to play out from ring put in mByteTmpAudioBuf
+    int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
+    int mRcvSeq; // sequence number read from the header of the ingoing packet
+    int mLastRcvSeq; // outgoing to audio
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -135,6 +224,10 @@ public:
     void setUdp(UDP *udp) { mUdp = udp; }
 #endif
     void setTest(int channels) { mTest = new TestAudio(channels); }
+    void setTestPLC(int channels, int fpp, int bps, int packetsInThePast) {
+        mTestPLC = new TestPLC(channels, fpp,
+                               bps, packetsInThePast);
+    }
 
 private:
     // these are identical to the rtaudio/tests/Duplex.cpp example
@@ -152,6 +245,7 @@ private:
     RtAudio::StreamParameters m_oParams;
     RtAudio::StreamOptions options;
     TestAudio *mTest;
+    TestPLC *mTestPLC;
 #ifndef AUDIO_ONLY
     UDP *mUdp;
 #endif
@@ -163,7 +257,7 @@ class APIsettings {
     static const int dRtAudioAPI = 0;
     static const int dSampleRate = 48000;
     static const int dFPP = 256;
-    static const int dChannels = 2;
+    static const int dChannels = 1;
     static const int dBytesPerSample = sizeof(MY_TYPE);
     static const int dAudioDataLen = dFPP * dChannels * dBytesPerSample;
     constexpr static const double dScale = 32767.0;
@@ -218,6 +312,7 @@ private:
 #endif
     friend class Audio;
     friend class TestAudio;
+    friend class TestPLC;
     friend class Hapitrip;
 };
 
@@ -267,6 +362,7 @@ private:
     static APIsettings as; // all API parameters
     friend class Audio;
     friend class TestAudio;
+    friend class TestPLC;
 #ifndef AUDIO_ONLY
     friend class TCP;
     friend class UDP;
