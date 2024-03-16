@@ -151,7 +151,7 @@ class UDP : public QUdpSocket  { // UDP socket for send and receive
 public:
     UDP(QString server);
     ~UDP();
-    void start(); // initialize HeaderStruct, bind socket, ready to receive
+    void start(bool sender); // initialize HeaderStruct, bind socket, ready to receive
     void setPeerUdpPort(int port) { mPeerUdpPort = port; }
     int getPeerUdpPort() { return mPeerUdpPort; }
     void setTest(int channels) { mTest = new TestAudio(channels); } // for test points
@@ -222,6 +222,7 @@ public:
                                       RtAudioStreamStatus status, void *arg);
 #ifndef AUDIO_ONLY
     void setUdp(UDP *udp) { mUdp = udp; }
+    void setUdpSend(UDP *udp) { mUdpSend = udp; }
 #endif
     void setTest(int channels) { mTest = new TestAudio(channels); }
     void setTestPLC(int channels, int fpp, int bps, int packetsInThePast) {
@@ -248,6 +249,7 @@ private:
     TestPLC *mTestPLC;
 #ifndef AUDIO_ONLY
     UDP *mUdp;
+    UDP *mUdpSend;
 #endif
 };
 #endif
@@ -256,7 +258,7 @@ class APIsettings {
     // default values
     static const int dRtAudioAPI = 0;
     static const int dSampleRate = 48000;
-    static const int dFPP = 256;
+    static const int dFPP = 128;
     static const int dChannels = 1;
     static const int dBytesPerSample = sizeof(MY_TYPE);
     static const int dAudioDataLen = dFPP * dChannels * dBytesPerSample;
@@ -275,7 +277,7 @@ class APIsettings {
             (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
-    static const bool dVerbose = 0;
+    static const bool dVerbose = 1;
     static const bool dUsePLC = 0;
     static const int dPacketsInThePast = 4;
 #endif
@@ -369,6 +371,7 @@ private:
     friend class StdDev;
     TCP * mTcp;
     UDP * mUdp;
+    UDP * mUdpSend;
 #endif
 #ifndef NO_AUDIO
     Audio *mAudio;
