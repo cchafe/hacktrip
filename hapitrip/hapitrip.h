@@ -151,7 +151,7 @@ class UDP : public QUdpSocket  { // UDP socket for send and receive
 public:
     UDP(QString server);
     ~UDP();
-    void start(bool sender); // initialize HeaderStruct, bind socket, ready to receive
+    void start(int localBindPort, bool read ); // initialize HeaderStruct, bind socket, ready to receive
     void setPeerUdpPort(int port) { mPeerUdpPort = port; }
     int getPeerUdpPort() { return mPeerUdpPort; }
     void setTest(int channels) { mTest = new TestAudio(channels); } // for test points
@@ -165,7 +165,6 @@ public:
     int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     int mRcvSeq; // sequence number read from the header of the ingoing packet
     int mLastRcvSeq; // outgoing to audio
-    void setUdpReadSocket(UDP * udpReadSocket) { mUdpReadSocket = udpReadSocket; }
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -185,7 +184,6 @@ public slots:
 private:
     int8_t *mTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     QString mServer; // peer address
-    UDP * mUdpReadSocket;
 
     // /// thread used to pull packets from Regulator (if mBufferStrategy==3)
     // QThread* mRegulatorThreadPtr;

@@ -17,15 +17,17 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     as.server = server; // set the server
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
-    mUdpSend = new UDP(as.server);
-    mUdpSend->setUdpReadSocket(mUdp);
-    mUdpSend->setPeerUdpPort(mTcp->connectToServer()); // to get the server port to send to
+    mUdpSend = new UDP(as.server); // 4465
+//    mUdpSend->setUdpReadSocket(mUdp);
+    int peerUdpPort = mTcp->connectToServer();
+    mUdp->setPeerUdpPort(peerUdpPort); // to get the server port to send to
+    mUdpSend->setPeerUdpPort(peerUdpPort); // to get the server port to send to
     delete mTcp; // done with TCP
 //    mUdp->setTest(as.channels); // in case of audio test points
 
 #ifndef NO_AUDIO
-    mAudio->setUdpSend(mUdpSend);
     mAudio->setUdp(mUdp);
+    mAudio->setUdpSend(mUdpSend);
 #endif
 #endif
 #ifndef NO_AUDIO
@@ -34,7 +36,7 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
                        as.FPP, 16, 2);
 #endif
 #ifndef AUDIO_ONLY
-    return mUdpSend->getPeerUdpPort();
+    return peerUdpPort;
 #else
     return 1;
 #endif
@@ -42,8 +44,13 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 
 void Hapitrip::run() { // hit this before server times out in like 10 seconds
 #ifndef AUDIO_ONLY
-    mUdpSend->start( true ); // xmt flow
-    mUdp->start( false ); // rcv flow
+    mUdp->start( Hapitrip::as.localAudioUdpPort, true );
+    // wait a bit to trick jt into streaming to localAudioUdpPort
+    // packets are sent by audioCallback
+    // audioCallback will send first 100 packets from mUdp and then switch
+    // to send from mUdpSend
+    mUdpSend->start( Hapitrip::as.localAudioUdpPort + 1, false );
+    // send our flow to jt from localAudioUdpPort + 1
 #endif
 #ifndef NO_AUDIO
     if (mAudio->start()) {
@@ -56,8 +63,8 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
 
 void Hapitrip::stop() { // the whole show
 #ifndef AUDIO_ONLY
-    mUdp->stop();
     mUdpSend->stop();
+    mUdp->stop();
 #endif
 #ifndef NO_AUDIO
     mAudio->stop();
@@ -99,18 +106,13 @@ int TCP::connectToServer() { // this is the TCP handshake
     int peerUdpPort = 0;
     char *port_buf = new char[sizeof(uint32_t)];
     if (state() == QTcpSocket::ConnectedState) { // connected ok
-int size  = sizeof(qint32);
-char* buf    = new char[size];
-int mReceiverBindPort = Hapitrip::as.localAudioUdpPort;;  ///< Incoming (receiving) port for local machine
-qToLittleEndian<qint32>(mReceiverBindPort, buf);
-        // QByteArray ba;
-        // const qint32 tmp = 4464; // Hapitrip::as.localAudioUdpPort;
-        // // quint32_be tmp2;
-        // qToBigEndian(tmp, &ba);
-        // // ba.setNum(tmp);
-        // write(ba); // send server our localAudioUdpPort
-write(buf, size);
-waitForBytesWritten(size);
+        // essential correspondence with void JackTrip::connectionSecured()
+        int size  = sizeof(qint32);
+        char* buf    = new char[size];
+        int mReceiverBindPort = Hapitrip::as.localAudioUdpPort;  ///< Incoming (receiving) port for local machine
+        qToLittleEndian<qint32>(mReceiverBindPort, buf);
+        write(buf, size);
+        waitForBytesWritten(size);
         waitForReadyRead(); // wait for reply with server's audio UDP port
         read(port_buf, sizeof(uint32_t));
         peerUdpPort = qFromLittleEndian<qint32>(port_buf);
@@ -124,7 +126,7 @@ waitForBytesWritten(size);
 
 UDP::UDP(QString server) : mServer(server) {};
 
-void UDP::start( bool sender ) {
+void UDP::start(int localBindPort, bool read) {
     // init the JackTrip header struct
     mHeader.TimeStamp = (uint64_t)0;
     mHeader.SeqNumber = (uint16_t)0;
@@ -162,18 +164,13 @@ void UDP::start( bool sender ) {
             serverHostAddress = info.addresses().constFirst();
         }
     }
-    if (sender) {
-        ret = bind(Hapitrip::as.localAudioUdpPort); // won't be used for listening
-        connect(this, &QUdpSocket::readyRead, mUdpReadSocket, &UDP::readPendingDatagrams); // dispatch arriving packet
-        if (Hapitrip::as.verbose)
-            std::cout << "UDP: sender = " << ret << " "
-                      << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
-    } else {
-        ret = bind(Hapitrip::as.localAudioUdpPort); // start listening
-        if (Hapitrip::as.verbose)
-            std::cout << "UDP: start listening = " << ret << " "
-                      << serverHostAddress.toString().toLocal8Bit().data() << std::endl;
-    }
+    ret = bind(localBindPort);
+    if (read) connect(this, &QUdpSocket::readyRead, this, &UDP::readPendingDatagrams); // dispatch arriving packet
+    if (Hapitrip::as.verbose)
+        std::cout << "UDP: socket = " << ret << " "
+                  << serverHostAddress.toString().toLocal8Bit().data()
+                  << " from / to "
+                  << localBindPort << std::endl;
 
     mSendSeq = 0;
     mRcvSeq = 0;
@@ -285,7 +282,10 @@ void UDP::readPendingDatagrams() { // incoming is triggered from readyRead signa
         memcpy(&mHeader, mRcvPacket.data(), sizeof(HeaderStruct));
         int rcvSeq = mHeader.SeqNumber;
         if (rcvSeq % Hapitrip::as.reportAfterPackets == 0)
-            if (Hapitrip::as.verbose) std::cout << "UDP rcv: seq = " << rcvSeq << std::endl;
+            if (Hapitrip::as.verbose) std::cout
+                    << "UDP rcv: seq = " << rcvSeq
+                    << " from " << senderPort
+                    << std::endl;
         int8_t *audioBuf = (int8_t *)(mRcvPacket.data() + sizeof(HeaderStruct));
             // mTest->sineTest((MY_TYPE *)audioBuf); // output sines
         //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio signal
@@ -332,13 +332,16 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
                          RtAudioStreamStatus /* status */,
                          void * /* data */) // last arg is used for "this"
 { // xxx
-    mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
-    // mUdp->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+    if (mTestPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
+        mUdp->send((int8_t *)inputBuffer);
+    else
+        mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
     // cout << mTestPLC->channels << "\n";
     mTestPLC->zeroTmpFloatBuf();
     bool glitch = mUdp->byteRingBufferPull();
     glitch = false;
-    // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+    if (glitch) cout << mTestPLC->mPcnt << "\n";
+    mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
 
     mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
     // mTestPLC->burg( glitch );
