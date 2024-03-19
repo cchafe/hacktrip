@@ -10,24 +10,49 @@
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
 
+Worker::Worker () {
+}
+
+Worker::~Worker() {
+}
+
+void Worker::process () {
+    mUdpSend = new UDP(Hapitrip::as.server); // 4465
+}
+
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     cout << "GUI params disabled, using APIsettings Hapitrip::as\n";
-
 #ifndef AUDIO_ONLY
+
+    QThread* thread = new QThread();
+    mWorker = new Worker();
+    mWorker->moveToThread(thread);
+    connect( thread, &QThread::started, mWorker, &Worker::process);
+    connect( mWorker, &Worker::finished, thread, &QThread::quit);
+    connect( mWorker, &Worker::finished, mWorker, &Worker::deleteLater);
+    connect( thread, &QThread::finished, thread, &QThread::deleteLater);
+    thread->start(); // calls process, instantiates internal mUdpSend
+
     as.server = server; // set the server
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
     mUdpSend = new UDP(as.server); // 4465
-//    mUdpSend->setUdpReadSocket(mUdp);
+    mWorker->process();
     int peerUdpPort = mTcp->connectToServer();
     mUdp->setPeerUdpPort(peerUdpPort); // to get the server port to send to
     mUdpSend->setPeerUdpPort(peerUdpPort); // to get the server port to send to
+    mWorker->setPeerUdpPort(
+        peerUdpPort,  Hapitrip::as.localAudioUdpPort + 2, false ); // to get the server port to send to
     delete mTcp; // done with TCP
 //    mUdp->setTest(as.channels); // in case of audio test points
 
 #ifndef NO_AUDIO
     mAudio->setUdp(mUdp);
-    mAudio->setUdpSend(mUdpSend);
+    //    mAudio->setUdpSend(mUdpSend);
+    mAudio->setUdpSend(mWorker->mUdpSend);
+    connect( mAudio, &Audio::sendToUdpWorker,
+            mWorker->mUdpSend, &UDP::sendFromThread);
+
 #endif
 #endif
 #ifndef NO_AUDIO
@@ -51,6 +76,7 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     // to send from mUdpSend
     mUdpSend->start( Hapitrip::as.localAudioUdpPort + 1, false );
     // send our flow to jt from localAudioUdpPort + 1
+//mWorker already started
 #endif
 #ifndef NO_AUDIO
     if (mAudio->start()) {
@@ -124,7 +150,7 @@ int TCP::connectToServer() { // this is the TCP handshake
     return peerUdpPort;
 }
 
-UDP::UDP(QString server) : mServer(server) {};
+UDP::UDP(QString server) : mServer(server) {}
 
 void UDP::start(int localBindPort, bool read) {
     // init the JackTrip header struct
@@ -196,6 +222,9 @@ UDP::~UDP() {
     for (int i = 0; i < mRing; i++) delete[] mRingBuffer[i];
     delete[] mTmpAudioBuf;
     //    delete reg; // don't delete if unused?
+}
+
+void UDP::sendFromThread() {
 }
 
 void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
@@ -335,7 +364,9 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     if (mTestPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
     else
-        mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+        emit sendToUdpWorker();
+    // mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+
     // cout << mTestPLC->channels << "\n";
     mTestPLC->zeroTmpFloatBuf();
     bool glitch = mUdp->byteRingBufferPull();
@@ -408,7 +439,8 @@ bool Audio::start() {
 
     m_adac->showWarnings(true);
 
-    options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME; // non-interleaved
+    options.flags = RTAUDIO_NONINTERLEAVED | RTAUDIO_SCHEDULE_REALTIME;
+    // non-interleaved, adds -2 priority to audio thread
     options.numberOfBuffers =
         Hapitrip::as.numberOfBuffersSuggestionToRtAudio;
     std::cout << "\niParams.deviceId = " << m_iParams.deviceId << std::endl;

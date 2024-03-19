@@ -2,6 +2,7 @@
 #define HAPITRIP_H
 
 #include "hapitrip_global.h"
+#include <QThread>
 
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
@@ -191,7 +192,8 @@ private:
     // QObject* mRegulatorWorkerPtr;
 signals:
     // void signalReceivedNetworkPacket();
-
+public slots:
+    void sendFromThread();
 };
 
 class TCP : public QTcpSocket {
@@ -201,7 +203,8 @@ public:
 #endif
 
 #ifndef NO_AUDIO
-class Audio {
+class Audio : public QObject {
+    Q_OBJECT
 public:
     Audio() {
         m_adac = nullptr;
@@ -249,6 +252,8 @@ private:
 #ifndef AUDIO_ONLY
     UDP *mUdp;
     UDP *mUdpSend;
+signals:
+    void sendToUdpWorker();
 #endif
 };
 #endif
@@ -309,6 +314,7 @@ private:
     QString server = NULL; // the server name or IP address
     friend class TCP;
     friend class UDP;
+    friend class Worker;
     friend class StdDev;
 #endif
     friend class Audio;
@@ -317,6 +323,22 @@ private:
     friend class Hapitrip;
 };
 
+class Worker : public QObject {
+    Q_OBJECT
+public:
+    Worker();
+    ~Worker();
+    void setPeerUdpPort(int peerPort, int localPort, bool read ) {
+        mUdpSend->setPeerUdpPort( peerPort );
+        mUdpSend->start( localPort, read );
+    }
+public slots:
+    void process();
+signals:
+    void finished();
+public:
+    UDP * mUdpSend;
+};
 
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
@@ -364,6 +386,7 @@ private:
     friend class Audio;
     friend class TestAudio;
     friend class TestPLC;
+    friend class Worker;
 #ifndef AUDIO_ONLY
     friend class TCP;
     friend class UDP;
@@ -371,6 +394,7 @@ private:
     TCP * mTcp;
     UDP * mUdp;
     UDP * mUdpSend;
+    Worker * mWorker;
 #endif
 #ifndef NO_AUDIO
     Audio *mAudio;
