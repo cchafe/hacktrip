@@ -225,7 +225,12 @@ UDP::~UDP() {
     //    delete reg; // don't delete if unused?
 }
 
+// xxx
 void UDP::sendFromThread() {
+    // if (mSendSeq % Hapitrip::as.reportAfterPackets == 0)
+    //     if (Hapitrip::as.verbose)    std::cout << "UDP send: packet = " << mSendSeq << std::endl;
+    // mSendSeq++;
+    // mSendSeq %= 65536;
 }
 
 void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
