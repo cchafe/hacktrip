@@ -25,6 +25,7 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef AUDIO_ONLY
 
     QThread* thread = new QThread();
+    thread->setObjectName("hacktripUDPsend");
     mWorker = new Worker();
     mWorker->moveToThread(thread);
     connect( thread, &QThread::started, mWorker, &Worker::process);
