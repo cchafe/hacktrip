@@ -163,9 +163,11 @@ public:
     void sendAudioData(float *buf); // convert one bufferfull to short int and send out
     void byteRingBufferPush(int8_t *buf, int seq); // push received packet to ring
     bool byteRingBufferPull(); // pull next packet to play out from ring put in mByteTmpAudioBuf
+    void sendFromThread(int8_t *audioBuf, int seq);
     int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     int mRcvSeq; // sequence number read from the header of the ingoing packet
     int mLastRcvSeq; // outgoing to audio
+    bool sendReady;
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
@@ -190,10 +192,6 @@ private:
     // QThread* mRegulatorThreadPtr;
     // /// worker used to pull packets from Regulator (if mBufferStrategy==3)
     // QObject* mRegulatorWorkerPtr;
-signals:
-    // void signalReceivedNetworkPacket();
-public slots:
-    void sendFromThread();
 };
 
 class TCP : public QTcpSocket {
@@ -252,8 +250,6 @@ private:
 #ifndef AUDIO_ONLY
     UDP *mUdp;
     UDP *mUdpSend;
-signals:
-    void sendToUdpWorker();
 #endif
 };
 #endif
@@ -314,7 +310,7 @@ private:
     QString server = NULL; // the server name or IP address
     friend class TCP;
     friend class UDP;
-    friend class Worker;
+    friend class WorkerThread;
     friend class StdDev;
 #endif
     friend class Audio;
@@ -323,21 +319,19 @@ private:
     friend class Hapitrip;
 };
 
-class Worker : public QObject {
+class WorkerThread : public QThread {
     Q_OBJECT
 public:
-    Worker();
-    ~Worker();
+    WorkerThread();
+    ~WorkerThread();
     void setPeerUdpPort(int peerPort, int localPort, bool read ) {
         mUdpSend->setPeerUdpPort( peerPort );
         mUdpSend->start( localPort, read );
     }
-public slots:
-    void process();
-signals:
-    void finished();
 public:
     UDP * mUdpSend;
+private:
+    virtual void run();
 };
 
 class HAPITRIP_EXPORT Hapitrip : public QObject {
@@ -386,7 +380,7 @@ private:
     friend class Audio;
     friend class TestAudio;
     friend class TestPLC;
-    friend class Worker;
+    friend class WorkerThread;
 #ifndef AUDIO_ONLY
     friend class TCP;
     friend class UDP;
@@ -394,7 +388,7 @@ private:
     TCP * mTcp;
     UDP * mUdp;
     UDP * mUdpSend;
-    Worker * mWorker;
+    WorkerThread * mWorker;
 #endif
 #ifndef NO_AUDIO
     Audio *mAudio;

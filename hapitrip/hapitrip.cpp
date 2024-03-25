@@ -10,40 +10,26 @@
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
 
-Worker::Worker () {
+WorkerThread::WorkerThread () {
 }
 
-Worker::~Worker() {
-}
-
-void Worker::process () {
-    mUdpSend = new UDP(Hapitrip::as.server); // 4465
+WorkerThread::~WorkerThread() {
 }
 
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     cout << "GUI params disabled, using APIsettings Hapitrip::as\n";
 #ifndef AUDIO_ONLY
 
-    QThread* thread = new QThread();
-    thread->setObjectName("hacktripUDPsend");
-    mWorker = new Worker();
-    mWorker->moveToThread(thread);
-    connect( thread, &QThread::started, mWorker, &Worker::process);
-    connect( mWorker, &Worker::finished, thread, &QThread::quit);
-    connect( mWorker, &Worker::finished, mWorker, &Worker::deleteLater);
-    connect( thread, &QThread::finished, thread, &QThread::deleteLater);
-    thread->start(); // calls process, instantiates internal mUdpSend
 
     as.server = server; // set the server
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
-    mUdpSend = new UDP(as.server); // 4465
-    mWorker->process();
+    // mUdpSend = new UDP(as.server); // 4465
     int peerUdpPort = mTcp->connectToServer();
     mUdp->setPeerUdpPort(peerUdpPort); // to get the server port to send to
-    mUdpSend->setPeerUdpPort(peerUdpPort); // to get the server port to send to
-    mWorker->setPeerUdpPort(
-        peerUdpPort,  Hapitrip::as.localAudioUdpPort + 2, false ); // to get the server port to send to
+    // mUdpSend->setPeerUdpPort(peerUdpPort); // to get the server port to send to
+    mWorker = new WorkerThread();
+    mWorker->setObjectName("hacktripUDPsend");
     delete mTcp; // done with TCP
 //    mUdp->setTest(as.channels); // in case of audio test points
 
@@ -51,8 +37,6 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     mAudio->setUdp(mUdp);
     //    mAudio->setUdpSend(mUdpSend);
     mAudio->setUdpSend(mWorker->mUdpSend);
-    connect( mAudio, &Audio::sendToUdpWorker,
-            mWorker->mUdpSend, &UDP::sendFromThread);
 
 #endif
 #endif
@@ -75,23 +59,35 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     // packets are sent by audioCallback
     // audioCallback will send first 100 packets from mUdp and then switch
     // to send from mUdpSend
-    mUdpSend->start( Hapitrip::as.localAudioUdpPort + 1, false );
-    // send our flow to jt from localAudioUdpPort + 1
-//mWorker already started
+
+    // ->start( Hapitrip::as.localAudioUdpPort + 1, false );
+// unused -- mUdpSendsends flow from localAudioUdpPort + 1
+
+    //mWorker sends flow from localAudioUdpPort + 2
+
 #endif
 #ifndef NO_AUDIO
     if (mAudio->start()) {
 #ifndef AUDIO_ONLY
         mUdp->stop();
 #endif
+        // xxx
+        mWorker->start(); // calls run, instantiates internal mUdpSend
+        QThread::msleep(50); // fixme to be a flag from mWorker run, but works
+        // mWorker->setPeerUdpPort(
+        //     mUdp->getPeerUdpPort(),
+        //     Hapitrip::as.localAudioUdpPort + 2, false );
+        mWorker->mUdpSend->setPeerUdpPort(mUdp->getPeerUdpPort());
     }
 #endif
 }
 
 void Hapitrip::stop() { // the whole show
 #ifndef AUDIO_ONLY
-    mUdpSend->stop();
+    // mUdpSend->stop();
     mUdp->stop();
+    mWorker->terminate();
+    mWorker->wait();
 #endif
 #ifndef NO_AUDIO
     mAudio->stop();
@@ -99,8 +95,8 @@ void Hapitrip::stop() { // the whole show
 #ifndef AUDIO_ONLY
     delete mUdp;
     mUdp = nullptr;
-    delete mUdpSend;
-    mUdpSend = nullptr;
+    // delete mUdpSend;
+    // mUdpSend = nullptr;
 #endif
 }
 
@@ -226,11 +222,23 @@ UDP::~UDP() {
 }
 
 // xxx
-void UDP::sendFromThread() {
-    // if (mSendSeq % Hapitrip::as.reportAfterPackets == 0)
-    //     if (Hapitrip::as.verbose)    std::cout << "UDP send: packet = " << mSendSeq << std::endl;
-    // mSendSeq++;
-    // mSendSeq %= 65536;
+void WorkerThread::run() {
+    std::cout << "WorkerThread starting\n";
+    mUdpSend = new UDP(Hapitrip::as.server);
+    mUdpSend->start( Hapitrip::as.localAudioUdpPort + 2, false );
+    while (true) {
+        if (mUdpSend->sendReady) {
+            mUdpSend->byteRingBufferPull();
+            mUdpSend->send(mUdpSend->mByteTmpAudioBuf);
+        }
+        usleep(1000);
+    }
+    std::cout << "WorkerThread finished\n";
+}
+
+void UDP::sendFromThread(int8_t *audioBuf, int seq) {
+    byteRingBufferPush(audioBuf, seq);
+    sendReady = true;
 }
 
 void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
@@ -250,7 +258,7 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     }
 }
 
-void UDP::byteRingBufferPush(int8_t *buf, [[maybe_unused]] int seq) { // push received packet to ring
+void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to ring
     // force sine
     // mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
@@ -370,15 +378,17 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     if (mTestPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
     else
-        emit sendToUdpWorker();
+        mUdpSend->sendFromThread((int8_t *)inputBuffer, mTestPLC->mPcnt); // send one packet to server with contents from the audio input source
     // mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
 
     // cout << mTestPLC->channels << "\n";
     mTestPLC->zeroTmpFloatBuf();
     bool glitch = mUdp->byteRingBufferPull();
+    // !!! todo byteRingBufferPull
+    // !!! needs to write mByteTmpAudioBuf
     glitch = false;
     if (glitch) cout << mTestPLC->mPcnt << "\n";
-    mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+    // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
 
     mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
     // mTestPLC->burg( glitch );
