@@ -3,6 +3,8 @@
 
 #include "hapitrip_global.h"
 #include <QThread>
+#include <QMutex>
+#include <QWaitCondition>
 
 //windows needs USEBETA, so moved this to libhapitrip.pro
 //#define USEBETA // 6beta1 rtaudio from github, otherwise 5.2.0 from rthaudio site
@@ -34,6 +36,9 @@ const QString gVersion = "0.3";
 
 typedef signed short MY_TYPE; // audio interface data is 16bit ints
 #define FORMAT RTAUDIO_SINT16 // which has this rtaudio name
+
+class Producer;
+class Consumer;
 
 class TestAudio { // for insertion in test points
 public:
@@ -280,6 +285,18 @@ class APIsettings {
     static const bool dVerbose = 1;
     static const bool dUsePLC = 0;
     static const int dPacketsInThePast = 4;
+/////////////////////
+// https://doc.qt.io/qt-6/qtcore-threads-waitconditions-example.html
+    constexpr static int dDataSize = 100000;
+    constexpr static int dBufferSize = 2;
+
+    // QMutex dMutex; // protects the buffer and the counter
+    // char dBuffer[dBufferSize];
+    // int dNumUsedBytes;
+
+    // QWaitCondition dBbufferNotEmpty;
+    // QWaitCondition dBufferNotFull;
+/////////////////////
 #endif
 
 private:
@@ -306,11 +323,25 @@ private:
     bool verbose = dVerbose;
     bool usePLC = dUsePLC;
     int packetsInThePast = dPacketsInThePast;
+    /////////////////////
+    // https://doc.qt.io/qt-6/qtcore-threads-waitconditions-example.html
+    int DataSize = dDataSize;
+    int BufferSize = dBufferSize;
+
+    QMutex mutex; // protects the buffer and the counter
+    char buffer[dBufferSize];
+    int numUsedBytes;
+
+    QWaitCondition bufferNotEmpty;
+    QWaitCondition bufferNotFull;
+    /////////////////////
 
     QString server = NULL; // the server name or IP address
     friend class TCP;
     friend class UDP;
     friend class WorkerThread;
+    friend class Producer;
+    friend class Consumer;
     friend class StdDev;
 #endif
     friend class Audio;
@@ -381,6 +412,8 @@ private:
     friend class TestAudio;
     friend class TestPLC;
     friend class WorkerThread;
+    friend class Producer;
+    friend class Consumer;
 #ifndef AUDIO_ONLY
     friend class TCP;
     friend class UDP;
@@ -389,6 +422,8 @@ private:
     UDP * mUdp;
     UDP * mUdpSend;
     WorkerThread * mWorker;
+    Producer * mProducer;
+    Consumer * mConsumer;
 #endif
 #ifndef NO_AUDIO
     Audio *mAudio;

@@ -7,8 +7,90 @@
 #include <iomanip>
 
 #include <QThread>
+#include <QRandomGenerator> // for producer example
 
 APIsettings Hapitrip::as; // declare static APIsettings instance
+
+class Producer : public QThread
+{
+public:
+    explicit Producer(QObject *parent = nullptr)
+        : QThread(parent)
+    {
+        setObjectName("Producer");
+    }
+
+private:
+    int i;
+    void run() override
+    {
+        i = 0;
+        while (true) {
+            i++;
+            i %= Hapitrip::as.DataSize;
+            //         for (int i = 0; i < Hapitrip::as.DataSize; ++i) {
+            {
+                const QMutexLocker locker(&Hapitrip::as.mutex);
+                while (Hapitrip::as.numUsedBytes == Hapitrip::as.BufferSize)
+                    // buffer is full
+                    Hapitrip::as.bufferNotFull.wait(&Hapitrip::as.mutex);
+                // release mutex and wait for consumer to consume to open space
+            }
+usleep(200);
+            Hapitrip::as.buffer[i % Hapitrip::as.BufferSize] =
+                "ACGT"[QRandomGenerator::global()->bounded(4)];
+            // there's space, so store something
+
+            {
+                const QMutexLocker locker(&Hapitrip::as.mutex);
+                ++Hapitrip::as.numUsedBytes;
+                Hapitrip::as.bufferNotEmpty.wakeAll();
+                // tell consumer there's something stored and release mutex
+            }
+        }
+    }
+};
+
+class Consumer : public QThread
+{
+public:
+    explicit Consumer(QObject *parent = nullptr)
+        : QThread(parent)
+    {
+        setObjectName("Consumer");
+    }
+
+private:
+    int i;
+    void run() override
+    {
+        i = 0;
+        while (true) {
+            i++;
+            i %= Hapitrip::as.DataSize;
+            // for (int i = 0; i < Hapitrip::as.DataSize; ++i) {
+            {
+                const QMutexLocker locker(&Hapitrip::as.mutex);
+                while (Hapitrip::as.numUsedBytes == 0)
+                    // buffer is empty
+                    Hapitrip::as.bufferNotEmpty.wait(&Hapitrip::as.mutex);
+                // release mutex and wait for producer to store something
+            }
+
+            usleep(200);
+            fprintf(stderr, "%c", Hapitrip::as.buffer[i % Hapitrip::as.BufferSize]);
+
+            {
+                const QMutexLocker locker(&Hapitrip::as.mutex);
+                --Hapitrip::as.numUsedBytes;
+                // producer stored something, so remove something
+                Hapitrip::as.bufferNotFull.wakeAll();
+                // tell producer there's room available and release mutex
+            }
+        }
+        fprintf(stderr, "\n");
+    }
+};
 
 WorkerThread::WorkerThread () {
 }
@@ -31,7 +113,11 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     mWorker = new WorkerThread();
     mWorker->setObjectName("hacktripUDPsend");
     delete mTcp; // done with TCP
-//    mUdp->setTest(as.channels); // in case of audio test points
+    //    mUdp->setTest(as.channels); // in case of audio test points
+    mProducer = new Producer();
+    mConsumer = new Consumer();
+    mProducer->start();
+    mConsumer->start();
 
 #ifndef NO_AUDIO
     mAudio->setUdp(mUdp);
@@ -60,24 +146,24 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     // audioCallback will send first 100 packets from mUdp and then switch
     // to send from mUdpSend
 
-    // ->start( Hapitrip::as.localAudioUdpPort + 1, false );
+// ->start( Hapitrip::as.localAudioUdpPort + 1, false );
 // unused -- mUdpSendsends flow from localAudioUdpPort + 1
 
-    //mWorker sends flow from localAudioUdpPort + 2
+//mWorker sends flow from localAudioUdpPort + 2
 
 #endif
 #ifndef NO_AUDIO
     if (mAudio->start()) {
 #ifndef AUDIO_ONLY
         mUdp->stop();
-#endif
-        // xxx
-        mWorker->start(); // calls run, instantiates internal mUdpSend
-        QThread::msleep(50); // fixme to be a flag from mWorker run, but works
-        // mWorker->setPeerUdpPort(
-        //     mUdp->getPeerUdpPort(),
-        //     Hapitrip::as.localAudioUdpPort + 2, false );
-        mWorker->mUdpSend->setPeerUdpPort(mUdp->getPeerUdpPort());
+#endif \
+    // xxx \
+    // mWorker->start(); // calls run, instantiates internal mUdpSend \
+    // QThread::msleep(50); // fixme to be a flag from mWorker run, but works \
+    // // mWorker->setPeerUdpPort( \
+    // //     mUdp->getPeerUdpPort(), \
+    // //     Hapitrip::as.localAudioUdpPort + 2, false ); \
+    // mWorker->mUdpSend->setPeerUdpPort(mUdp->getPeerUdpPort());
     }
 #endif
 }
@@ -88,6 +174,10 @@ void Hapitrip::stop() { // the whole show
     mUdp->stop();
     mWorker->terminate();
     mWorker->wait();
+    mProducer->terminate();
+    mProducer->wait();
+    mConsumer->terminate();
+    mConsumer->wait();
 #endif
 #ifndef NO_AUDIO
     mAudio->stop();
@@ -224,15 +314,15 @@ UDP::~UDP() {
 // xxx
 void WorkerThread::run() {
     std::cout << "WorkerThread starting\n";
-    mUdpSend = new UDP(Hapitrip::as.server);
-    mUdpSend->start( Hapitrip::as.localAudioUdpPort + 2, false );
-    while (true) {
-        if (mUdpSend->sendReady) {
-            mUdpSend->byteRingBufferPull();
-            mUdpSend->send(mUdpSend->mByteTmpAudioBuf);
-        }
-        usleep(1000);
-    }
+    // mUdpSend = new UDP(Hapitrip::as.server);
+    // mUdpSend->start( Hapitrip::as.localAudioUdpPort + 2, false );
+    // while (true) {
+    //     if (mUdpSend->sendReady) {
+    //         mUdpSend->byteRingBufferPull();
+    //         mUdpSend->send(mUdpSend->mByteTmpAudioBuf);
+    //     }
+    //     usleep(1000);
+    // }
     std::cout << "WorkerThread finished\n";
 }
 
@@ -377,8 +467,8 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 { // xxx
     if (mTestPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
-    else
-        mUdpSend->sendFromThread((int8_t *)inputBuffer, mTestPLC->mPcnt); // send one packet to server with contents from the audio input source
+    // else
+    //     mUdpSend->sendFromThread((int8_t *)inputBuffer, mTestPLC->mPcnt); // send one packet to server with contents from the audio input source
     // mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
 
     // cout << mTestPLC->channels << "\n";
