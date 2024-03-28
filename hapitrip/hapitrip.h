@@ -228,6 +228,7 @@ public:
 #ifndef AUDIO_ONLY
     void setUdp(UDP *udp) { mUdp = udp; }
     void setUdpSend(UDP *udp) { mUdpSend = udp; }
+    void setProducer(Producer *pro) { mProducer = pro; }
 #endif
     void setTest(int channels) { mTest = new TestAudio(channels); }
     void setTestPLC(int channels, int fpp, int bps, int packetsInThePast) {
@@ -255,6 +256,7 @@ private:
 #ifndef AUDIO_ONLY
     UDP *mUdp;
     UDP *mUdpSend;
+    Producer * mProducer;
 #endif
 };
 #endif
@@ -288,7 +290,7 @@ class APIsettings {
 /////////////////////
 // https://doc.qt.io/qt-6/qtcore-threads-waitconditions-example.html
     constexpr static int dDataSize = 100000;
-    constexpr static int dBufferSize = 2;
+    constexpr static int dBufferSize = 20;
 
     // QMutex dMutex; // protects the buffer and the counter
     // char dBuffer[dBufferSize];
@@ -334,6 +336,9 @@ private:
 
     QWaitCondition bufferNotEmpty;
     QWaitCondition bufferNotFull;
+
+    std::vector<int8_t *> mRingBuffer; // ring buffer
+
     /////////////////////
 
     QString server = NULL; // the server name or IP address

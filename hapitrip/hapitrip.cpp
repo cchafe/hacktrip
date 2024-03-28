@@ -18,9 +18,21 @@ public:
         : QThread(parent)
     {
         setObjectName("Producer");
+        for (int i = 0; i < Hapitrip::as.BufferSize; i++) {
+            int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
+            for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
+                tmp[j] = 0;
+            Hapitrip::as.mRingBuffer.push_back(tmp);
+        }
     }
-
+    void send(int8_t * packet) {
+        // fprintf(stderr, "Producer send");
+        mByteTmpAudioBuf = packet;
+        gotOne = true;
+    };
 private:
+    int8_t * mByteTmpAudioBuf;
+    bool gotOne = false;
     int i;
     void run() override
     {
@@ -36,11 +48,12 @@ private:
                     Hapitrip::as.bufferNotFull.wait(&Hapitrip::as.mutex);
                 // release mutex and wait for consumer to consume to open space
             }
-usleep(200);
+            while (!gotOne) usleep(200);
+            Hapitrip::as.mRingBuffer[i % Hapitrip::as.BufferSize] = mByteTmpAudioBuf;
             Hapitrip::as.buffer[i % Hapitrip::as.BufferSize] =
                 "ACGT"[QRandomGenerator::global()->bounded(4)];
             // there's space, so store something
-
+            gotOne = false;
             {
                 const QMutexLocker locker(&Hapitrip::as.mutex);
                 ++Hapitrip::as.numUsedBytes;
@@ -58,9 +71,17 @@ public:
         : QThread(parent)
     {
         setObjectName("Consumer");
+        mByteTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen];
+        memset(mByteTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
+        mUdpSend = new UDP(Hapitrip::as.server);
+        mUdpSend->start( Hapitrip::as.localAudioUdpPort + 2, false );
+        int peerUdpPort = 61002;
+        mUdpSend->setPeerUdpPort(peerUdpPort);
     }
 
 private:
+    int8_t * mByteTmpAudioBuf;
+    UDP * mUdpSend;
     int i;
     void run() override
     {
@@ -76,9 +97,12 @@ private:
                     Hapitrip::as.bufferNotEmpty.wait(&Hapitrip::as.mutex);
                 // release mutex and wait for producer to store something
             }
-
+//xxx
             usleep(200);
-            fprintf(stderr, "%c", Hapitrip::as.buffer[i % Hapitrip::as.BufferSize]);
+            // fprintf(stderr, "%c", Hapitrip::as.buffer[i % Hapitrip::as.BufferSize]);
+            mByteTmpAudioBuf = Hapitrip::as.mRingBuffer[i % Hapitrip::as.BufferSize];
+
+            mUdpSend->send((int8_t *)mByteTmpAudioBuf);
 
             {
                 const QMutexLocker locker(&Hapitrip::as.mutex);
@@ -123,7 +147,7 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     mAudio->setUdp(mUdp);
     //    mAudio->setUdpSend(mUdpSend);
     mAudio->setUdpSend(mWorker->mUdpSend);
-
+    mAudio->setProducer(mProducer);
 #endif
 #endif
 #ifndef NO_AUDIO
@@ -156,8 +180,7 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     if (mAudio->start()) {
 #ifndef AUDIO_ONLY
         mUdp->stop();
-#endif \
-    // xxx \
+#endif
     // mWorker->start(); // calls run, instantiates internal mUdpSend \
     // QThread::msleep(50); // fixme to be a flag from mWorker run, but works \
     // // mWorker->setPeerUdpPort( \
@@ -311,7 +334,6 @@ UDP::~UDP() {
     //    delete reg; // don't delete if unused?
 }
 
-// xxx
 void WorkerThread::run() {
     std::cout << "WorkerThread starting\n";
     // mUdpSend = new UDP(Hapitrip::as.server);
@@ -368,6 +390,7 @@ bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator 
     // std::cout << "byteRingBufferPull ";
     bool glitch = (mLastRcvSeq == mRcvSeq);
     mLastRcvSeq = mRcvSeq;
+    if (glitch) mLastRcvSeq++;
     return glitch;
 }
 
@@ -467,21 +490,23 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 { // xxx
     if (mTestPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
+    else mProducer->send((int8_t *)inputBuffer);
     // else
     //     mUdpSend->sendFromThread((int8_t *)inputBuffer, mTestPLC->mPcnt); // send one packet to server with contents from the audio input source
     // mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
+
 
     // cout << mTestPLC->channels << "\n";
     mTestPLC->zeroTmpFloatBuf();
     bool glitch = mUdp->byteRingBufferPull();
     // !!! todo byteRingBufferPull
     // !!! needs to write mByteTmpAudioBuf
-    glitch = false;
-    if (glitch) cout << mTestPLC->mPcnt << "\n";
+    // glitch = false;
+    // if (glitch) cout << mTestPLC->mPcnt << "\n";
     // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
 
     mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
-    // mTestPLC->burg( glitch );
+    mTestPLC->burg( glitch );
     mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
     // mTest->sineTest((MY_TYPE *)outputBuffer);
     mTestPLC->mPcnt++;
