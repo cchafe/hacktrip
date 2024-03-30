@@ -20,15 +20,15 @@ public:
     {
         setObjectName( (producer) ? "Producer" : "Consumer");
         if (producer) for (int i = 0; i < bufferSize; i++) {
-            int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
-            for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
-                tmp[j] = 0;
-            Hapitrip::as.mRingBuffer.push_back(tmp);
-        }
+                int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
+                for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
+                    tmp[j] = 0;
+                Hapitrip::as.mRingBuffer.push_back(tmp);
+            }
     }
     ~Send() {
         if (producer) for (int i = 0; i < bufferSize; i++)
-            delete[] Hapitrip::as.mRingBuffer[i];
+                delete[] Hapitrip::as.mRingBuffer[i];
     }
     void send(int8_t * packet) {
         mByteTmpAudioBuf = packet;
@@ -140,7 +140,7 @@ private:
                     // tell producer there's room available and release mutex
                 }
             } else {
-                // mUdpSend->stop(); no need mUdp will send exit packets
+                // mUdpSend->stop(); no need, just let mUdp send exit packets
                 break;
             }
         }
@@ -156,16 +156,12 @@ Hapitrip::Hapitrip() {
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     cout << "GUI params disabled, using APIsettings Hapitrip::as\n";
 #ifndef AUDIO_ONLY
-
-
     mAudio = new Audio;
     as.server = server; // set the server
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
-    // mUdpSend = new UDP(as.server); // 4465
     int peerUdpPort = mTcp->connectToServer();
     mUdp->setPeerUdpPort(peerUdpPort); // to get the server port to send to
-    // mUdpSend->setPeerUdpPort(peerUdpPort); // to get the server port to send to
     delete mTcp; // done with TCP
     //    mUdp->setTest(as.channels); // in case of audio test points
     if (mProducer == nullptr) mProducer = new Producer();
@@ -173,7 +169,6 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 
 #ifndef NO_AUDIO
     mAudio->setUdp(mUdp);
-    //    mAudio->setUdpSend(mUdpSend);
     mAudio->setProducer(mProducer);
     mProducer->start();
     mConsumer->start();
@@ -196,13 +191,8 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     mUdp->start( Hapitrip::as.localAudioUdpPort, true );
     // wait a bit to trick jt into streaming to localAudioUdpPort
     // packets are sent by audioCallback
-    // audioCallback will send first 100 packets from mUdp and then switch
-    // to send from mUdpSend
-
-// ->start( Hapitrip::as.localAudioUdpPort + 1, false );
-// unused -- mUdpSendsends flow from localAudioUdpPort + 1
-
-
+    // audioCallback will send first n packets from mUdp and then switch
+    // to send from mProducer / mConsumer ringbuffer threads
 #endif
 #ifndef NO_AUDIO
     if (mAudio->start()) {
@@ -494,11 +484,7 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 { // xxx
     if (mTestPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
-    else mProducer->send((int8_t *)inputBuffer);
-    // else
-    //     mUdpSend->sendFromThread((int8_t *)inputBuffer, mTestPLC->mPcnt); // send one packet to server with contents from the audio input source
-    // mUdpSend->send((int8_t *)inputBuffer); // send one packet to server with contents from the audio input source
-
+    else mProducer->send((int8_t *)inputBuffer); 
 
     // cout << mTestPLC->channels << "\n";
     mTestPLC->zeroTmpFloatBuf();
