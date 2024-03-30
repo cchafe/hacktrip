@@ -747,6 +747,7 @@ Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
 TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     : channels(chans), fpp(fpp), bps(bps), packetsInThePast(packetsInThePast)
 {
+    cout << " --testPLC " << channels << " channels\n";
     mPcnt = 0;
     mTime = new Time();
     mTime->start();
