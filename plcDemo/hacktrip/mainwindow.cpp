@@ -34,7 +34,6 @@ void MainWindow::on_startButton_clicked() {
 void MainWindow::on_stopButton_clicked() {
     if (mHt != nullptr) {
         mHt->stop();
-        fprintf(stderr, "bbbbb\n");
     }
     //  this->close();
 }

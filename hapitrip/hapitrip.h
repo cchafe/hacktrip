@@ -301,18 +301,6 @@ class APIsettings {
     static const bool dVerbose = 1;
     static const bool dUsePLC = 0;
     static const int dPacketsInThePast = 4;
-/////////////////////
-// https://doc.qt.io/qt-6/qtcore-threads-waitconditions-example.html
-    constexpr static int dDataSize = 100000;
-    constexpr static int dBufferSize = 20;
-
-    // QMutex dMutex; // protects the buffer and the counter
-    // char dBuffer[dBufferSize];
-    // int dNumUsedBytes;
-
-    // QWaitCondition dBbufferNotEmpty;
-    // QWaitCondition dBufferNotFull;
-/////////////////////
 #endif
 
 private:
@@ -341,11 +329,8 @@ private:
     int packetsInThePast = dPacketsInThePast;
     /////////////////////
     // https://doc.qt.io/qt-6/qtcore-threads-waitconditions-example.html
-    int DataSize = dDataSize;
-    int BufferSize = dBufferSize;
 
     QMutex mutex; // protects the buffer and the counter
-    char buffer[dBufferSize];
     int numUsedBytes;
 
     QWaitCondition bufferNotEmpty;
@@ -358,7 +343,7 @@ private:
     QString server = NULL; // the server name or IP address
     friend class TCP;
     friend class UDP;
-    friend class WorkerThread;
+    friend class Send;
     friend class Producer;
     friend class Consumer;
     friend class StdDev;
@@ -369,20 +354,6 @@ private:
     friend class Hapitrip;
 };
 
-class WorkerThread : public QThread {
-    Q_OBJECT
-public:
-    WorkerThread();
-    ~WorkerThread();
-    void setPeerUdpPort(int peerPort, int localPort, bool read ) {
-        mUdpSend->setPeerUdpPort( peerPort );
-        mUdpSend->start( localPort, read );
-    }
-public:
-    UDP * mUdpSend;
-private:
-    virtual void run();
-};
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
@@ -424,7 +395,7 @@ private:
     friend class Audio;
     friend class TestAudio;
     friend class TestPLC;
-    friend class WorkerThread;
+    friend class Send;
     friend class Producer;
     friend class Consumer;
 #ifndef AUDIO_ONLY
@@ -434,7 +405,6 @@ private:
     TCP * mTcp;
     UDP * mUdp;
     UDP * mUdpSend;
-    WorkerThread * mWorker;
     Producer * mProducer;
     Consumer * mConsumer;
 #endif
