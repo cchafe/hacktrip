@@ -18,6 +18,7 @@
 #ifndef NO_AUDIO
 //#include <RtAudio.h> // if built from a hapitrip.pro and it's likelt inclusion of rtaudio.pri
 #include <../../rtaudio/RtAudio.h> // if not
+#include <../../plc/TestPLC.h>
 #endif
 
 #ifndef AUDIO_ONLY
@@ -30,7 +31,9 @@
 
 #include <vector>
 using namespace std;
-#include "burgalgorithm.h"
+
+//#include "burgalgorithm.h"
+
 
 const QString gVersion = "0.3";
 
@@ -48,6 +51,8 @@ public:
 private:
     std::vector<double> mPhasor; // multi-channel capable
 };
+
+/*
 class Time {
     double accum = 0.0;
     int cnt = 0;
@@ -145,7 +150,7 @@ public:
     int mNotTrained;
 private:
 };
-
+*/
 #ifndef AUDIO_ONLY
 struct HeaderStruct { // standard JackTrip network packet header
 public:

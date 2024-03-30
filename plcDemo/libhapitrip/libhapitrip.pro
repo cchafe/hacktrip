@@ -5,6 +5,7 @@ CONFIG      += link_pkgconfig plugin no_plugin_name_prefix
 CONFIG += c++17
 QT -= gui
 QT += network
+include(../libplc/libplc.pri)
 include(../librtaudio/librtaudio.pri)
 
 win32 {

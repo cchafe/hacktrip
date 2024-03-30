@@ -677,7 +677,7 @@ void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert 
         }
     }
 }
-
+/*
 void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bufferfull and convert to short int
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         for (int i = 0; i < Hapitrip::as.FPP; i++) {
@@ -930,3 +930,4 @@ void Channel::ringBufferPull(int past) { // pull numbered packet from ring
     mTmpFloatBuf = mPacketRing[pastPtr];
     // } else cout << "ring buffer not primed\n";
 }
+*/
