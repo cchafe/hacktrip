@@ -7,7 +7,7 @@ MainWindow::MainWindow(QWidget *parent)
     , mUi(new Ui::MainWindow)
 {
     mUi->setupUi(this);
-    mHt = nullptr;
+    mHt = new Hapitrip(); // APIstructure inits its params with its defaults
     mQuitShortCut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q),
                                   this, SLOT(close()));
 }
@@ -15,10 +15,10 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow() {
     delete mQuitShortCut;
     delete mUi;
+    delete mHt;
 }
 
 void MainWindow::on_startButton_clicked() {
-    mHt = new Hapitrip(); // APIstructure inits its params with its defaults
     updateStateFromUI(); // override params with initial UI values
     mConnected = false;
     mConnected = mHt->connectToServer(mServer); // grab the next free client slot from server pool
@@ -34,7 +34,7 @@ void MainWindow::on_startButton_clicked() {
 void MainWindow::on_stopButton_clicked() {
     if (mHt != nullptr) {
         mHt->stop();
-        delete mHt;
+        fprintf(stderr, "bbbbb\n");
     }
     //  this->close();
 }

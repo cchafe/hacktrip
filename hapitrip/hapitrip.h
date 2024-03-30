@@ -51,6 +51,7 @@ private:
 class Time {
     double accum = 0.0;
     int cnt = 0;
+    int glitchCnt = 0;
     double tmpTime = 0.0;
 public:
     QElapsedTimer mCallbackTimer; // for rcvElapsedTime
@@ -73,7 +74,15 @@ public:
         return tmp;
     }
     void start() { mCallbackTimer.start(); }
-    void trigger() { tmpTime = mCallbackTimer.nsecsElapsed(); }
+    void trigger() {
+        tmpTime = mCallbackTimer.nsecsElapsed();
+        glitchCnt++;
+    }
+    int glitches() {
+        int tmp = glitchCnt;
+        glitchCnt = 0;
+        return tmp;
+    }
 };
 
 class Channel {
@@ -211,10 +220,14 @@ class Audio : public QObject {
 public:
     Audio() {
         m_adac = nullptr;
+        mTestPLC = nullptr;
+        glitchSeries = 0;
     }
     ~Audio() {
         if (m_adac != nullptr)
             delete m_adac;
+        if (mTestPLC != nullptr)
+            delete mTestPLC;
     }
     bool start();
     void stop();
@@ -232,7 +245,7 @@ public:
 #endif
     void setTest(int channels) { mTest = new TestAudio(channels); }
     void setTestPLC(int channels, int fpp, int bps, int packetsInThePast) {
-        mTestPLC = new TestPLC(channels, fpp,
+        if (mTestPLC == nullptr) mTestPLC = new TestPLC(channels, fpp,
                                bps, packetsInThePast);
     }
 
@@ -257,6 +270,7 @@ private:
     UDP *mUdp;
     UDP *mUdpSend;
     Producer * mProducer;
+    int glitchSeries;
 #endif
 };
 #endif
@@ -369,17 +383,11 @@ public:
 private:
     virtual void run();
 };
-
 class HAPITRIP_EXPORT Hapitrip : public QObject {
     Q_OBJECT
 public:
-    Hapitrip() {
-        mAudio = new Audio;
-    }
-    ~Hapitrip() {
-        if (mAudio != nullptr) delete mAudio;
-        mAudio = nullptr;
-    }
+    Hapitrip();
+    ~Hapitrip();
     int connectToServer(QString server); // initiate handshake and start listening for UDP incoming
     void run(); // initiate bidirectional flows, sending UDP outgoing to server starts it sending
     void stop(); // stop the works

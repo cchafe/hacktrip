@@ -1,6 +1,7 @@
 #include "hapitrip.h"
 
 #include <QtEndian>
+#include <cstdio>
 #include <math.h>
 #include <iostream>
 #include <ios>
@@ -25,18 +26,29 @@ public:
             Hapitrip::as.mRingBuffer.push_back(tmp);
         }
     }
+    ~Producer() {
+        for (int i = 0; i < Hapitrip::as.BufferSize; i++)
+            delete[] Hapitrip::as.mRingBuffer[i];
+    }
     void send(int8_t * packet) {
         // fprintf(stderr, "Producer send");
         mByteTmpAudioBuf = packet;
         gotOne = true;
     };
+    void stop() {
+        stopped = true;
+    }
 private:
     int8_t * mByteTmpAudioBuf;
     bool gotOne = false;
     int i;
+    bool stopped = false;
     void run() override
     {
+        gotOne = false;
+        stopped = false;
         i = 0;
+        Hapitrip::as.numUsedBytes = 0;
         while (true) {
             i++;
             i %= Hapitrip::as.DataSize;
@@ -48,7 +60,7 @@ private:
                     Hapitrip::as.bufferNotFull.wait(&Hapitrip::as.mutex);
                 // release mutex and wait for consumer to consume to open space
             }
-            while (!gotOne) usleep(200);
+            while (!gotOne && !stopped) usleep(200);
             Hapitrip::as.mRingBuffer[i % Hapitrip::as.BufferSize] = mByteTmpAudioBuf;
             Hapitrip::as.buffer[i % Hapitrip::as.BufferSize] =
                 "ACGT"[QRandomGenerator::global()->bounded(4)];
@@ -60,7 +72,9 @@ private:
                 Hapitrip::as.bufferNotEmpty.wakeAll();
                 // tell consumer there's something stored and release mutex
             }
+            if (stopped) break;
         }
+        fprintf(stderr, "zzzzzzzzz\n");
     }
 };
 
@@ -74,17 +88,25 @@ public:
         mByteTmpAudioBuf = new int8_t[Hapitrip::as.audioDataLen];
         memset(mByteTmpAudioBuf, 0, Hapitrip::as.audioDataLen);
         mUdpSend = new UDP(Hapitrip::as.server);
-        mUdpSend->start( Hapitrip::as.localAudioUdpPort + 2, false );
-        int peerUdpPort = 61002;
-        mUdpSend->setPeerUdpPort(peerUdpPort);
     }
-
+    ~Consumer(){
+        delete[] mByteTmpAudioBuf;
+        delete mUdpSend;
+    }
+    void stop() {
+        stopped = true;
+    }
 private:
     int8_t * mByteTmpAudioBuf;
     UDP * mUdpSend;
     int i;
+    bool stopped = false;
     void run() override
     {
+        mUdpSend->start( Hapitrip::as.localAudioUdpPort + 2, false );
+        int peerUdpPort = 61002;
+        mUdpSend->setPeerUdpPort(peerUdpPort);
+        stopped = false;
         i = 0;
         while (true) {
             i++;
@@ -97,22 +119,26 @@ private:
                     Hapitrip::as.bufferNotEmpty.wait(&Hapitrip::as.mutex);
                 // release mutex and wait for producer to store something
             }
-//xxx
-            usleep(200);
-            // fprintf(stderr, "%c", Hapitrip::as.buffer[i % Hapitrip::as.BufferSize]);
-            mByteTmpAudioBuf = Hapitrip::as.mRingBuffer[i % Hapitrip::as.BufferSize];
+            if (!stopped) {
+                usleep(200);
+                // fprintf(stderr, "%c", Hapitrip::as.buffer[i % Hapitrip::as.BufferSize]);
+                mByteTmpAudioBuf = Hapitrip::as.mRingBuffer[i % Hapitrip::as.BufferSize];
 
-            mUdpSend->send((int8_t *)mByteTmpAudioBuf);
+                mUdpSend->send((int8_t *)mByteTmpAudioBuf);
 
-            {
-                const QMutexLocker locker(&Hapitrip::as.mutex);
-                --Hapitrip::as.numUsedBytes;
-                // producer stored something, so remove something
-                Hapitrip::as.bufferNotFull.wakeAll();
-                // tell producer there's room available and release mutex
+                {
+                    const QMutexLocker locker(&Hapitrip::as.mutex);
+                    --Hapitrip::as.numUsedBytes;
+                    // producer stored something, so remove something
+                    Hapitrip::as.bufferNotFull.wakeAll();
+                    // tell producer there's room available and release mutex
+                }
+            } else {
+                // mUdpSend->stop(); no need mUdp will send exit packets
+                break;
             }
         }
-        fprintf(stderr, "\n");
+        fprintf(stderr, "xxxxxxxxxxxxxxxx\n");
     }
 };
 
@@ -122,11 +148,18 @@ WorkerThread::WorkerThread () {
 WorkerThread::~WorkerThread() {
 }
 
+Hapitrip::Hapitrip() {
+    mAudio = nullptr;
+    mProducer = nullptr;
+    mConsumer = nullptr;
+}
+
 int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     cout << "GUI params disabled, using APIsettings Hapitrip::as\n";
 #ifndef AUDIO_ONLY
 
 
+    mAudio = new Audio;
     as.server = server; // set the server
     mTcp = new TCP(); // temporary for handshake with server
     mUdp = new UDP(as.server); // bidirectional socket for trading audio with server
@@ -134,20 +167,23 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
     int peerUdpPort = mTcp->connectToServer();
     mUdp->setPeerUdpPort(peerUdpPort); // to get the server port to send to
     // mUdpSend->setPeerUdpPort(peerUdpPort); // to get the server port to send to
-    mWorker = new WorkerThread();
-    mWorker->setObjectName("hacktripUDPsend");
+    // mWorker = new WorkerThread();
+    // mWorker->setObjectName("hacktripUDPsend");
     delete mTcp; // done with TCP
     //    mUdp->setTest(as.channels); // in case of audio test points
-    mProducer = new Producer();
-    mConsumer = new Consumer();
-    mProducer->start();
-    mConsumer->start();
+    if (mProducer == nullptr) mProducer = new Producer();
+    if (mConsumer == nullptr) mConsumer = new Consumer();
+    // connect(mProducer, &Producer::finished, mProducer, &QObject::deleteLater);
+    // connect(mConsumer, &Consumer::finished, mConsumer, &QObject::deleteLater);
+    fprintf(stderr, "aaaaa\n");
 
 #ifndef NO_AUDIO
     mAudio->setUdp(mUdp);
     //    mAudio->setUdpSend(mUdpSend);
-    mAudio->setUdpSend(mWorker->mUdpSend);
+    // mAudio->setUdpSend(mWorker->mUdpSend);
     mAudio->setProducer(mProducer);
+    mProducer->start();
+    mConsumer->start();
 #endif
 #endif
 #ifndef NO_AUDIO
@@ -180,12 +216,12 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
     if (mAudio->start()) {
 #ifndef AUDIO_ONLY
         mUdp->stop();
-#endif
-    // mWorker->start(); // calls run, instantiates internal mUdpSend \
-    // QThread::msleep(50); // fixme to be a flag from mWorker run, but works \
-    // // mWorker->setPeerUdpPort( \
-    // //     mUdp->getPeerUdpPort(), \
-    // //     Hapitrip::as.localAudioUdpPort + 2, false ); \
+#endif \
+    // mWorker->start(); // calls run, instantiates internal mUdpSend \ \
+    // QThread::msleep(50); // fixme to be a flag from mWorker run, but works \ \
+    // // mWorker->setPeerUdpPort( \ \
+    // //     mUdp->getPeerUdpPort(), \ \
+    // //     Hapitrip::as.localAudioUdpPort + 2, false ); \ \
     // mWorker->mUdpSend->setPeerUdpPort(mUdp->getPeerUdpPort());
     }
 #endif
@@ -195,22 +231,35 @@ void Hapitrip::stop() { // the whole show
 #ifndef AUDIO_ONLY
     // mUdpSend->stop();
     mUdp->stop();
-    mWorker->terminate();
-    mWorker->wait();
-    mProducer->terminate();
-    mProducer->wait();
-    mConsumer->terminate();
-    mConsumer->wait();
+    // mWorker->terminate();
+    // mWorker->wait();
+    mProducer->stop();
+    mConsumer->stop();
+    // mProducer->terminate();
+    // mProducer->wait();
+    // mConsumer->terminate();
+    // mConsumer->wait();
 #endif
 #ifndef NO_AUDIO
     mAudio->stop();
+    if (mAudio != nullptr) delete mAudio;
+    mAudio = nullptr;
+    fprintf(stderr, "dddd\n");
+    fprintf(stderr, "sssss\n");
 #endif
-#ifndef AUDIO_ONLY
-    delete mUdp;
+}
+
+Hapitrip::~Hapitrip() {
+    fprintf(stderr, "ccccc\n");
+    if (mUdp != nullptr) delete mUdp;
     mUdp = nullptr;
-    // delete mUdpSend;
-    // mUdpSend = nullptr;
-#endif
+    fprintf(stderr, "eeee\n");
+    // if (mProducer != nullptr) delete mProducer;
+    // mProducer = nullptr;
+    // fprintf(stderr, "ffff\n");
+    // if (mConsumer != nullptr) delete mConsumer;
+    // mConsumer = nullptr;
+    fprintf(stderr, "gggg\n");
 }
 
 void Hapitrip::xfrBufs(float *sendBuf, float *rcvBuf) { // trigger audio rcv and send
@@ -499,9 +548,8 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     // cout << mTestPLC->channels << "\n";
     mTestPLC->zeroTmpFloatBuf();
     bool glitch = mUdp->byteRingBufferPull();
-    // !!! todo byteRingBufferPull
-    // !!! needs to write mByteTmpAudioBuf
-    // glitch = false;
+    if (glitch) glitchSeries++; else glitchSeries = 0;
+    if (glitchSeries > 5) glitch = false;
     // if (glitch) cout << mTestPLC->mPcnt << "\n";
     // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
 
@@ -841,7 +889,7 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                           c->prediction
                           // (c->lastWasGlitch) ? c->prediction : c->realPast
                           , upToNow );
-                cout << "\ncoeffs ";
+                // cout << "\ncoeffs ";
             }
             // if (mNotTrained < 2) c->coeffs[0] = 0.9;
             mNotTrained++;
@@ -892,7 +940,9 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
         if (glitch) mTime->collect();
     }
     if (Hapitrip::as.dVerbose)
-        if (!(mPcnt%300)) std::cout << "avg " << mTime->avg() << " \n";
+        if (!(mPcnt%300)) std::cout << "avg " << mTime->avg()
+                      << " glitches " << mTime->glitches()
+                      << " \n";
 }
 
 TestPLC::~TestPLC(){
