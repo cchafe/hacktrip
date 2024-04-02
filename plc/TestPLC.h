@@ -5,8 +5,6 @@
 #include <QElapsedTimer>
 
 using namespace std;
-typedef signed short MY_TYPE; // audio interface data is 16bit ints
-#define FORMAT RTAUDIO_SINT16 // which has this rtaudio name
 
 class BurgAlgorithm
 {
@@ -85,23 +83,23 @@ public:
     vector<float> mZeros;
     bool lastWasGlitch;
 private:
-    friend class TestPLC;
+    friend class PLC;
 };
 
-class Q_DECL_EXPORT TestPLC {
+class Q_DECL_EXPORT PLC {
     // for insertion in test points
 public:
-    TestPLC(int chans, int fpp, int bps, int packetsInThePast);
-    ~TestPLC();
+    PLC(int chans, int fpp, int bps, int packetsInThePast);
+    ~PLC();
     Time *mTime;
     // int audioCallback(void *outputBuffer, void *inputBuffer,
     //                   unsigned int nBufferFrames, double streamTime,
     //                   RtAudioStreamStatus, void *bytesInfoFromStreamOpen);
-    void straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch); // generate a signal
+    void straightWire(qint16 *out, qint16 *in, bool glitch); // generate a signal
     void burg(bool glitch); // generate a signal
     void zeroTmpFloatBuf();
-    void toFloatBuf(MY_TYPE *in);
-    void fromFloatBuf(MY_TYPE *out);
+    void toFloatBuf(qint16 *in);
+    void fromFloatBuf(qint16 *out);
     int mPcnt;
     vector<float> mTmpFloatBuf; // one bufferfull of audio, used for rcv and send operations
     vector<Channel *> mChanData;

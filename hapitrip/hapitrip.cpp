@@ -176,7 +176,7 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #endif
 #ifndef NO_AUDIO
     mAudio->setTest(as.channels);
-    mAudio->setTestPLC(as.channels,
+    mAudio->setPLC(as.channels,
                        as.FPP, 16, 2);
 #endif
 #ifndef AUDIO_ONLY
@@ -482,23 +482,23 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
                          RtAudioStreamStatus /* status */,
                          void * /* data */) // last arg is used for "this"
 { // xxx
-    if (mTestPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
+    if (mPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
     else mProducer->send((int8_t *)inputBuffer); 
 
-    // cout << mTestPLC->channels << "\n";
-    mTestPLC->zeroTmpFloatBuf();
+    // cout << mPLC->channels << "\n";
+    mPLC->zeroTmpFloatBuf();
     bool glitch = mUdp->byteRingBufferPull();
     if (glitch) glitchSeries++; else glitchSeries = 0;
     if (glitchSeries > 2) glitch = false;
-    // if (glitch) cout << mTestPLC->mPcnt << "\n";
+    // if (glitch) cout << mPLC->mPcnt << "\n";
     // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
 
-    mTestPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
-    mTestPLC->burg( glitch );
-    mTestPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
+    mPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+    mPLC->burg( glitch );
+    mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
     // mTest->sineTest((MY_TYPE *)outputBuffer);
-    mTestPLC->mPcnt++;
+    mPLC->mPcnt++;
 
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
     // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
@@ -678,7 +678,7 @@ void TestAudio::printSamples(MY_TYPE *buffer) { // get next bufferfull, convert 
     }
 }
 /*
-void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bufferfull and convert to short int
+void PLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bufferfull and convert to short int
     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
         for (int i = 0; i < Hapitrip::as.FPP; i++) {
             double tmpIn = ((MY_TYPE)*in++) * Hapitrip::as.invScale;
@@ -744,10 +744,10 @@ Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
     lastWasGlitch = false;
 }
 
-TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
+PLC::PLC(int chans, int fpp, int bps, int packetsInThePast)
     : channels(chans), fpp(fpp), bps(bps), packetsInThePast(packetsInThePast)
 {
-    cout << " --testPLC " << channels << " channels\n";
+    cout << " --PLC " << channels << " channels\n";
     mPcnt = 0;
     mTime = new Time();
     mTime->start();
@@ -787,7 +787,7 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     mNotTrained = 0;
 }
 
-void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
+void PLC::burg(bool glitch) { // generate next bufferfull and convert to short int
     bool primed = mPcnt > packetsInThePast;
     for (int ch = 0; ch < channels; ch++) {
         Channel * c = mChanData[ch];
@@ -887,18 +887,18 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                       << " \n";
 }
 
-TestPLC::~TestPLC(){
+PLC::~PLC(){
     delete mTime;
     for (int ch = 0; ch < channels; ch++) delete mChanData[ch];
     delete ba;
 }
 
-void TestPLC::zeroTmpFloatBuf() {
+void PLC::zeroTmpFloatBuf() {
     for (int ch = 0; ch < channels; ch++)
         mChanData[ch]->mTmpFloatBuf = mChanData[ch]->mZeros;
 }
 
-void TestPLC::toFloatBuf(MY_TYPE *in) {
+void PLC::toFloatBuf(MY_TYPE *in) {
     for (int ch = 0; ch < channels; ch++)
         for (int i = 0; i < fpp; i++) {
             double tmpIn = ((MY_TYPE)*in++) * invScale;
@@ -906,7 +906,7 @@ void TestPLC::toFloatBuf(MY_TYPE *in) {
         }
 }
 
-void TestPLC::fromFloatBuf(MY_TYPE *out) {
+void PLC::fromFloatBuf(MY_TYPE *out) {
     for (int ch = 0; ch < channels; ch++)
         for (int i = 0; i < fpp; i++) {
             double tmpOut = mChanData[ch]->mTmpFloatBuf[i];

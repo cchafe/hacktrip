@@ -114,13 +114,13 @@ public:
     vector<float> mZeros;
     bool lastWasGlitch;
 private:
-    friend class TestPLC;
+    friend class PLC;
 };
 
-class TestPLC { // for insertion in test points
+class PLC { // for insertion in test points
 public:
-    TestPLC(int chans, int fpp, int bps, int packetsInThePast);
-    ~TestPLC();
+    PLC(int chans, int fpp, int bps, int packetsInThePast);
+    ~PLC();
     Time *mTime;
     // int audioCallback(void *outputBuffer, void *inputBuffer,
     //                   unsigned int nBufferFrames, double streamTime,
@@ -225,14 +225,14 @@ class Audio : public QObject {
 public:
     Audio() {
         m_adac = nullptr;
-        mTestPLC = nullptr;
+        mPLC = nullptr;
         glitchSeries = 0;
     }
     ~Audio() {
         if (m_adac != nullptr)
             delete m_adac;
-        if (mTestPLC != nullptr)
-            delete mTestPLC;
+        if (mPLC != nullptr)
+            delete mPLC;
     }
     bool start();
     void stop();
@@ -249,8 +249,8 @@ public:
     void setProducer(Producer *pro) { mProducer = pro; }
 #endif
     void setTest(int channels) { mTest = new TestAudio(channels); }
-    void setTestPLC(int channels, int fpp, int bps, int packetsInThePast) {
-        if (mTestPLC == nullptr) mTestPLC = new TestPLC(channels, fpp,
+    void setPLC(int channels, int fpp, int bps, int packetsInThePast) {
+        if (mPLC == nullptr) mPLC = new PLC(channels, fpp,
                                bps, packetsInThePast);
     }
 
@@ -270,7 +270,7 @@ private:
     RtAudio::StreamParameters m_oParams;
     RtAudio::StreamOptions options;
     TestAudio *mTest;
-    TestPLC *mTestPLC;
+    PLC *mPLC;
 #ifndef AUDIO_ONLY
     UDP *mUdp;
     UDP *mUdpSend;
@@ -355,7 +355,7 @@ private:
 #endif
     friend class Audio;
     friend class TestAudio;
-    friend class TestPLC;
+    friend class PLC;
     friend class Hapitrip;
 };
 
@@ -399,7 +399,7 @@ private:
     static APIsettings as; // all API parameters
     friend class Audio;
     friend class TestAudio;
-    friend class TestPLC;
+    friend class PLC;
     friend class Send;
     friend class Producer;
     friend class Consumer;

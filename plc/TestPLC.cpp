@@ -156,10 +156,10 @@ Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
     lastWasGlitch = false;
 }
 
-TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
+PLC::PLC(int chans, int fpp, int bps, int packetsInThePast)
     : channels(chans), fpp(fpp), bps(bps), packetsInThePast(packetsInThePast)
 {
-    cout << " --testPLC " << channels << " channels\n";
+    cout << " --PLC " << channels << " channels\n";
     mPcnt = 0;
     mTime = new Time();
     mTime->start();
@@ -199,7 +199,7 @@ TestPLC::TestPLC(int chans, int fpp, int bps, int packetsInThePast)
     mNotTrained = 0;
 }
 
-void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to short int
+void PLC::burg(bool glitch) { // generate next bufferfull and convert to short int
     bool primed = mPcnt > packetsInThePast;
     for (int ch = 0; ch < channels; ch++) {
         Channel * c = mChanData[ch];
@@ -299,32 +299,32 @@ void TestPLC::burg(bool glitch) { // generate next bufferfull and convert to sho
                       << " \n";
 }
 
-TestPLC::~TestPLC(){
+PLC::~PLC(){
     delete mTime;
     for (int ch = 0; ch < channels; ch++) delete mChanData[ch];
     delete ba;
 }
 
-void TestPLC::zeroTmpFloatBuf() {
+void PLC::zeroTmpFloatBuf() {
     for (int ch = 0; ch < channels; ch++)
         mChanData[ch]->mTmpFloatBuf = mChanData[ch]->mZeros;
 }
 
-void TestPLC::toFloatBuf(MY_TYPE *in) {
+void PLC::toFloatBuf(qint16 *in) {
     for (int ch = 0; ch < channels; ch++)
         for (int i = 0; i < fpp; i++) {
-            double tmpIn = ((MY_TYPE)*in++) * invScale;
+            double tmpIn = ((qint16)*in++) * invScale;
             mChanData[ch]->mTmpFloatBuf[i] = tmpIn;
         }
 }
 
-void TestPLC::fromFloatBuf(MY_TYPE *out) {
+void PLC::fromFloatBuf(qint16 *out) {
     for (int ch = 0; ch < channels; ch++)
         for (int i = 0; i < fpp; i++) {
             double tmpOut = mChanData[ch]->mTmpFloatBuf[i];
             if (tmpOut > 1.0) tmpOut = 1.0;
             if (tmpOut < -1.0) tmpOut = -1.0;
-            *out++ = (MY_TYPE)(tmpOut * scale);
+            *out++ = (qint16)(tmpOut * scale);
         }
 }
 
