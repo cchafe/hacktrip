@@ -1,11 +1,10 @@
-#ifndef TESTPLC_H
-#define TESTPLC_H
+#ifndef PLC_H
+#define PLC_H
 #include <math.h>
 #include <vector>
 #include <QElapsedTimer>
 
 using namespace std;
-#define DBL  float
 typedef signed short MY_TYPE; // audio interface data is 16bit ints
 #define FORMAT RTAUDIO_SINT16 // which has this rtaudio name
 
@@ -13,16 +12,16 @@ class BurgAlgorithm
 {
 public:
     BurgAlgorithm( size_t size );
-    void train(vector<DBL> &coeffs, const vector<float> &x, size_t size);
-    void predict( vector<DBL> &coeffs, vector<float> &predicted );
+    void train(vector<float> &coeffs, const vector<float> &x, size_t size);
+    void predict( vector<float> &coeffs, vector<float> &predicted );
 private:
     size_t m;
     size_t N;
     int size;
-    vector<DBL> Ak;
-    vector<DBL> AkReset;
-    vector<DBL> f;
-    vector<DBL> b;
+    vector<float> Ak;
+    vector<float> AkReset;
+    vector<float> f;
+    vector<float> b;
 };
 
 class Time {
@@ -123,5 +122,5 @@ public:
     int mNotTrained;
 };
 
-#endif // TESTPLC_H
+#endif // PLC_H
 

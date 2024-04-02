@@ -1,32 +1,6 @@
 #include "TestPLC.h"
 #include <QDebug>
-#include <stk/Stk.h>
-
-using namespace std;
-using namespace stk;
-
-
-QString qStringFromLongDouble1(const DBL myLongDouble)
-{
-    std::stringstream ss;
-    ss << myLongDouble;
-
-    return QString::fromStdString(ss.str());
-}
-
-bool classify(double d)
-{
-    bool tmp = false;
-    switch (fpclassify(d)) {
-    case FP_INFINITE:  qDebug() <<  ("infinite");  tmp = true; break;
-    case FP_NAN:       qDebug() <<  ("NaN");  tmp = true;        break;
-    case FP_ZERO:      qDebug() <<  ("zero");  tmp = true;       break;
-    case FP_SUBNORMAL: qDebug() <<  ("subnormal");  tmp = true;  break;
-        //    case FP_NORMAL:    qDebug() <<  ("normal");    break;
-    }
-    //  if (signbit(d)) qDebug() <<  (" negative\n"); else qDebug() <<  (" positive or unsigned\n");
-    return tmp;
-}
+#include <iostream>
 
 BurgAlgorithm::BurgAlgorithm( size_t size ) // upToNow = packetsInThePast * fpp
 {
@@ -46,23 +20,8 @@ BurgAlgorithm::BurgAlgorithm( size_t size ) // upToNow = packetsInThePast * fpp
 
 }
 
-// from .pl
-// size = upToNow = packetsInThePast * fpp
-
-// coeffs.size() = upToNow - 1
-
-// operates on input with size of upToNow
-// prediction.size( upToNow - 1 + fpp * 2 )
-// or
-// realPast.size() = upToNow
-
-// Ak.size() = upToNow
-// m = N = upToNow - 1
-
-void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t size )
+void BurgAlgorithm::train(vector<float> &coeffs, const vector<float> &x, size_t size )
 {
-    ////
-
     // INITIALIZE Ak
     Ak = AkReset;
 
@@ -71,7 +30,7 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t si
         f[i] = b[i] = x[i];
 
     // INITIALIZE Dk
-    DBL Dk = 0.0; // was double
+    float Dk = 0.0;
     for ( size_t j = 0; j <= N; j++ ) {
         // Dk += 2.000001 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
         // Dk += 2.5 * f[ j ] * f[ j ]; // needs more damping than orig 2.0
@@ -88,50 +47,24 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t si
     }
     Dk -= f[ 0 ] * f[ 0 ] + b[ N ] * b[ N ];
 
-    //// N is $#x-1 in C++ but $#x in perl
-    //    my $Dk = sum map {
-    //        2.0 * $f[$_] ** 2
-    //    } 0 .. $#f;
-    //    $Dk -= $f[0] ** 2 + $B[$#x] ** 2;
-
-    //    qDebug() << "Dk" << qStringFromLongDouble1(Dk);
-    // if ( classify(Dk) )
-    // { qDebug() << pCnt << "init";
-    // }
-
     // BURG RECURSION
     for ( size_t k = 0; k < m; k++ )
     {
         // COMPUTE MU
-        DBL mu = 0.0;
+        float mu = 0.0;
         for ( size_t n = 0; n <= N - k - 1; n++ )
         {
             mu += f[ n + k + 1 ] * b[ n ];
         }
 
         if ( Dk == 0.0 ) Dk = 0.0000001; // from online testing
-        // if ( classify(Dk) )
-        // { qDebug() << pCnt << "run";
-        // }
         mu *= -2.0 / Dk;
-        //            if ( isnan(Dk) )  { qDebug() << "k" << k; }
-
-        //            if (Dk!=0.0) {}
-        //        else qDebug() << "k" << k << "Dk==0" << qStringFromLongDouble1(Dk);
-
-        //// N is $#x-1
-        //# compute mu
-        //my $mu = sum map {
-        //    $f[$_ + $k + 1] * $B[$_]
-        //} 0 .. $#x - $k - 1;
-        //$mu *= -2.0 / $Dk;
-
 
         // UPDATE Ak
         for ( size_t n = 0; n <= ( k + 1 ) / 2; n++ )
         {
-            DBL t1 = Ak[ n ] + mu * Ak[ k + 1 - n ];
-            DBL t2 = Ak[ k + 1 - n ] + mu * Ak[ n ];
+            float t1 = Ak[ n ] + mu * Ak[ k + 1 - n ];
+            float t2 = Ak[ k + 1 - n ] + mu * Ak[ n ];
             Ak[ n ] = t1;
             Ak[ k + 1 - n ] = t2;
         }
@@ -139,8 +72,8 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t si
         // UPDATE f and b
         for ( size_t n = 0; n <= N - k - 1; n++ )
         {
-            DBL t1 = f[ n + k + 1 ] + mu * b[ n ]; // were double
-            DBL t2 = b[ n ] + mu * f[ n + k + 1 ];
+            float t1 = f[ n + k + 1 ] + mu * b[ n ]; // were double
+            float t2 = b[ n ] + mu * f[ n + k + 1 ];
             f[ n + k + 1 ] = t1;
             b[ n ] = t2;
         }
@@ -153,19 +86,10 @@ void BurgAlgorithm::train(vector<DBL> &coeffs, const vector<float> &x, size_t si
     }
     // ASSIGN COEFFICIENTS
     coeffs.assign( ++Ak.begin(), Ak.end() );
-
-    //    return $self->_set_coefficients([ @Ak[1 .. $#Ak] ]);
-
 }
 
-void BurgAlgorithm::predict( vector<DBL> &coeffs, vector<float> &tail )
+void BurgAlgorithm::predict( vector<float> &coeffs, vector<float> &tail )
 {
-    //    qDebug() << "tail.at(0)" << tail[0]*32768;
-    //    qDebug() << "tail.at(1)" << tail[1]*32768;
-    // tail.resize(m+tail.size()); size it in main instead
-    //    qDebug() << "tail.at(m)" << tail[m]*32768;
-    //    qDebug() << "tail.at(...end...)" << tail[tail.size()-1]*32768;
-    //    qDebug() << "m" << m << "tail.size()" << tail.size();
     for ( size_t i = m; i < tail.size(); i++ )
     {
         tail[ i ] = 0.0;
@@ -175,17 +99,6 @@ void BurgAlgorithm::predict( vector<DBL> &coeffs, vector<float> &tail )
         }
     }
 }
-
-
-// void TestPLC::straightWire(MY_TYPE *out, MY_TYPE *in, bool glitch) { // generate next bufferfull and convert to short int
-//     for (int ch = 0; ch < Hapitrip::as.channels; ch++) {
-//         for (int i = 0; i < Hapitrip::as.FPP; i++) {
-//             double tmpIn = ((MY_TYPE)*in++) * Hapitrip::as.invScale;
-//             double tmpOut = (glitch) ? 0.0 : tmpIn;
-//             *out++ = (MY_TYPE)(tmpOut * Hapitrip::as.scale);
-//         }
-//     }
-// }
 
 #define NOW (pCnt * fpp) // incrementing time
 Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
