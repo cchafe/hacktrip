@@ -1,4 +1,4 @@
-#include "TestPLC.h"
+#include "PLC.h"
 #include <QDebug>
 #include <iostream>
 

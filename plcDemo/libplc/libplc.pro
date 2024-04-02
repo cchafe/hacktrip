@@ -11,10 +11,10 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    ../../plc/TestPLC.cpp
+    ../../plc/PLC.cpp
 
 HEADERS += \
-    ../../plc/TestPLC.h \
+    ../../plc/PLC.h \
     libplc_global.h
 
 # Default rules for deployment.

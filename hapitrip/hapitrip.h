@@ -18,7 +18,7 @@
 #ifndef NO_AUDIO
 //#include <RtAudio.h> // if built from a hapitrip.pro and it's likelt inclusion of rtaudio.pri
 #include <../../rtaudio/RtAudio.h> // if not
-#include <../../plc/TestPLC.h>
+#include <../../plc/PLC.h>
 #endif
 
 #ifndef AUDIO_ONLY
