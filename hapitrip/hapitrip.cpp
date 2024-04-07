@@ -485,7 +485,9 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 { // xxx
     if (mPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
-    else mProducer->send((int8_t *)inputBuffer); 
+    else mProducer->send((int8_t *)inputBuffer);
+    {
+        const QMutexLocker locker(&Hapitrip::as.mutexRcv);
 
     // cout << mPLC->channels << "\n";
     mPLC->zeroTmpFloatBuf();
@@ -503,7 +505,7 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
     // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
     // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
-
+    }
     return 0;
 }
 #endif
