@@ -305,7 +305,7 @@ class APIsettings {
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 1;
     static const bool dUsePLC = 0;
-    static const int dPacketsInThePast = 4;
+    static const int dPacketsInThePast = 2;
 #endif
 
 private:
@@ -344,6 +344,7 @@ private:
     std::vector<int8_t *> mRingBuffer; // ring buffer
 
     /////////////////////
+    QMutex mutexRcv; // for rcv
 
     QString server = NULL; // the server name or IP address
     friend class TCP;

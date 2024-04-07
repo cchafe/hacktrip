@@ -177,7 +177,7 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef NO_AUDIO
     mAudio->setTest(as.channels);
     mAudio->setPLC(as.channels,
-                       as.FPP, 16, 2);
+                       as.FPP, 16, as.packetsInThePast);
 #endif
 #ifndef AUDIO_ONLY
     return peerUdpPort;
