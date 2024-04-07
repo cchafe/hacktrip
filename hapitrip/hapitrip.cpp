@@ -499,7 +499,6 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     mPLC->burg( glitch );
     mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
     // mTest->sineTest((MY_TYPE *)outputBuffer);
-    mPLC->mPcnt++;
 
     // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
     // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines

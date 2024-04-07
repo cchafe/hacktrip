@@ -294,9 +294,10 @@ void PLC::burg(bool glitch) { // generate next bufferfull and convert to short i
         if (glitch) mTime->collect();
     }
     // if (Hapitrip::as.dVerbose)
-        if (!(mPcnt%300)) std::cout << "avg " << mTime->avg()
-                      << " glitches " << mTime->glitches()
-                      << " \n";
+    if (!(mPcnt%300)) std::cout << "avg " << mTime->avg()
+                  << " glitches " << mTime->glitches()
+                  << " \n";
+    mPcnt++;
 }
 
 PLC::~PLC(){
