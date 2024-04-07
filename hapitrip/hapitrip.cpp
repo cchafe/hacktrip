@@ -364,12 +364,15 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
     }
 }
 
+// xxx
 void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to ring
     // force sine
     // mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
 
     {
+        const QMutexLocker locker(&Hapitrip::as.mutexRcv);
+
         mRcvSeq = seq;
         memcpy(mByteTmpAudioBuf, buf, Hapitrip::as.audioDataLen); // put in ring
 
@@ -491,14 +494,14 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 
     // cout << mPLC->channels << "\n";
     mPLC->zeroTmpFloatBuf();
-    bool glitch = (bool)mUdp->byteRingBufferPull();
-    if (glitch) glitchSeries++; else glitchSeries = 0;
-    if (glitchSeries > 2) glitch = false;
+    int cadence = mUdp->byteRingBufferPull();
+    // if (glitch) glitchSeries++; else glitchSeries = 0;
+    // if (glitchSeries > 2) glitch = false;
     // if (glitch) cout << mPLC->mPcnt << "\n";
     // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
 
     mPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
-    mPLC->burg( glitch );
+    mPLC->burg( (bool)cadence );
     mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
     // mTest->sineTest((MY_TYPE *)outputBuffer);
 
