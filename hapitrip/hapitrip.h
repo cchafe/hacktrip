@@ -303,7 +303,7 @@ class APIsettings {
             (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 50;
     static const int dReportAfterPackets = 500;
-    static const bool dVerbose = 1;
+    static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
     static const int dPacketsInThePast = 2;
 #endif
