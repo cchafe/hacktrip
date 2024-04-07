@@ -177,7 +177,7 @@ int Hapitrip::connectToServer([[maybe_unused]] QString server) {
 #ifndef NO_AUDIO
     mAudio->setTest(as.channels);
     mAudio->setPLC(as.channels,
-                       as.FPP, 16, as.packetsInThePast);
+                   as.FPP, 16, as.packetsInThePast);
 #endif
 #ifndef AUDIO_ONLY
     return peerUdpPort;
@@ -374,7 +374,7 @@ void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to 
         const QMutexLocker locker(&Hapitrip::as.mutexRcv);
         mRcvSeq = seq;
         memcpy(mRingBuffer[0], buf, Hapitrip::as.audioDataLen); // put in ring
-//  memcpy(mByteTmpAudioBuf, buf, Hapitrip::as.audioDataLen); // put in ring
+        //  memcpy(mByteTmpAudioBuf, buf, Hapitrip::as.audioDataLen); // put in ring
 
     }
 }
@@ -492,27 +492,32 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     {
         const QMutexLocker locker(&Hapitrip::as.mutexRcv);
 
-    // cout << mPLC->channels << "\n";
-    mPLC->zeroTmpFloatBuf();
-    int cadence = mUdp->byteRingBufferPull();
-    // if (glitch) glitchSeries++; else glitchSeries = 0;
-    // if (glitchSeries > 2) glitch = false;
-    // if (glitch) cout << mPLC->mPcnt << "\n";
-    // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+        // cout << mPLC->channels << "\n";
+        mPLC->zeroTmpFloatBuf();
+        int cadence = mUdp->byteRingBufferPull();
+        // if (glitch) glitchSeries++; else glitchSeries = 0;
+        // if (glitchSeries > 2) glitch = false;
+        // if (glitch) cout << mPLC->mPcnt << "\n";
+        // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
         // mPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
-    if (cadence == 0) {
+        if (cadence == 0) {
             mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
             mPLC->burg( (bool)cadence );
-    } else {
-            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
-            mPLC->burg( (bool)cadence );
-    }
-    mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
-    // mTest->sineTest((MY_TYPE *)outputBuffer);
+        } else {
+            if (cadence > Hapitrip::as.packetsInThePast)
+                cadence = Hapitrip::as.packetsInThePast;
+            while (cadence > 0) {
+                mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
+                mPLC->burg( (bool)cadence );
+                cadence--;
+            }
+        }
+        mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
+        // mTest->sineTest((MY_TYPE *)outputBuffer);
 
-    // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
-    // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
-    // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
+        // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
+        // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
+        // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
     }
     return 0;
 }
