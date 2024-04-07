@@ -301,7 +301,7 @@ class APIsettings {
     static const int dTimeoutMS = 1000;
     constexpr static const double dPacketPeriodMS =
             (1000.0 / (double)(dSampleRate / dFPP));
-    static const int dRingBufferLength = 50;
+    static const int dRingBufferLength = 150;
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
