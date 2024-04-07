@@ -181,7 +181,7 @@ public:
     void rcvAudioData(float *buf); // readPendingDatagrams into ring and pull next packet from ring
     void sendAudioData(float *buf); // convert one bufferfull to short int and send out
     void byteRingBufferPush(int8_t *buf, int seq); // push received packet to ring
-    bool byteRingBufferPull(); // pull next packet to play out from ring put in mByteTmpAudioBuf
+    int byteRingBufferPull(); // pull next packet to play out from ring put in mByteTmpAudioBuf
     void sendFromThread(int8_t *audioBuf, int seq);
     int8_t *mByteTmpAudioBuf; // one bufferfull of audio, used for rcv and send operations
     int mRcvSeq; // sequence number read from the header of the ingoing packet

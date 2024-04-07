@@ -380,23 +380,13 @@ void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to 
 // virtual void receiveNetworkPacket(int8_t* ptrToReadSlot)
 // translates to ringBufferPull()
 
-bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
-    // std::cout << "byteRingBufferPull ";
-    //     bool glitch = (mLastRcvSeq == mRcvSeq);
-    //     mLastRcvSeq = mRcvSeq;
-    // //    if (glitch) mLastRcvSeq++;
-    //     return glitch;
-
-    int tmp = (mRcvSeq - mLastRcvSeq);
-    if (tmp < 0) tmp += 65536;
-    if (tmp>1) std::cout << "\n";
-    std::cout << tmp;
-    //if (mCadence != 1) std::cout << mCadence << "\n";
-    // bool glitch = (tmp <= 0); // || (mCadence > 1));
-    //    bool glitch = (mLastRcvSeq == mRcvSeq);
+int UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
+    int cadence = (mRcvSeq - mLastRcvSeq);
+    if (cadence < 0) cadence += 65536;
+    if (cadence>1) std::cout << "\n";
+    std::cout << cadence;
     mLastRcvSeq = mRcvSeq;
-    //    if (glitch) mLastRcvSeq++;
-    return (bool)tmp;
+    return cadence;
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
@@ -499,7 +489,7 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
 
     // cout << mPLC->channels << "\n";
     mPLC->zeroTmpFloatBuf();
-    bool glitch = mUdp->byteRingBufferPull();
+    bool glitch = (bool)mUdp->byteRingBufferPull();
     if (glitch) glitchSeries++; else glitchSeries = 0;
     if (glitchSeries > 2) glitch = false;
     // if (glitch) cout << mPLC->mPcnt << "\n";
