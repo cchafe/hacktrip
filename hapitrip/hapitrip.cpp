@@ -502,13 +502,13 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
         // mPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
         if (cadence == 0) {
             mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
-            mPLC->burg( (bool)cadence );
+            mPLC->burg( true );
         } else {
             if (cadence > Hapitrip::as.packetsInThePast)
                 cadence = Hapitrip::as.packetsInThePast;
             while (cadence > 0) {
                 mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
-                mPLC->burg( (bool)cadence );
+                mPLC->burg( false );
                 cadence--;
             }
         }
