@@ -382,10 +382,21 @@ void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to 
 
 bool UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
     // std::cout << "byteRingBufferPull ";
-    bool glitch = (mLastRcvSeq == mRcvSeq);
+    //     bool glitch = (mLastRcvSeq == mRcvSeq);
+    //     mLastRcvSeq = mRcvSeq;
+    // //    if (glitch) mLastRcvSeq++;
+    //     return glitch;
+
+    int tmp = (mRcvSeq - mLastRcvSeq);
+    if (tmp < 0) tmp += 65536;
+    if (tmp>1) std::cout << "\n";
+    std::cout << tmp;
+    //if (mCadence != 1) std::cout << mCadence << "\n";
+    // bool glitch = (tmp <= 0); // || (mCadence > 1));
+    //    bool glitch = (mLastRcvSeq == mRcvSeq);
     mLastRcvSeq = mRcvSeq;
-    if (glitch) mLastRcvSeq++;
-    return glitch;
+    //    if (glitch) mLastRcvSeq++;
+    return (bool)tmp;
 }
 
 // when not using an audio callback e.g., for chuck these are called from its tick loop
