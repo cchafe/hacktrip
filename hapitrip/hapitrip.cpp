@@ -500,8 +500,13 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     // if (glitch) cout << mPLC->mPcnt << "\n";
     // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
         // mPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
-    mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
-    mPLC->burg( (bool)cadence );
+    if (cadence == 0) {
+            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
+            mPLC->burg( (bool)cadence );
+    } else {
+            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
+            mPLC->burg( (bool)cadence );
+    }
     mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
     // mTest->sineTest((MY_TYPE *)outputBuffer);
 
