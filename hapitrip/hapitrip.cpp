@@ -372,9 +372,9 @@ void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to 
 
     {
         const QMutexLocker locker(&Hapitrip::as.mutexRcv);
-
         mRcvSeq = seq;
-        memcpy(mByteTmpAudioBuf, buf, Hapitrip::as.audioDataLen); // put in ring
+        memcpy(mRingBuffer[0], buf, Hapitrip::as.audioDataLen); // put in ring
+//  memcpy(mByteTmpAudioBuf, buf, Hapitrip::as.audioDataLen); // put in ring
 
     }
 }
@@ -499,8 +499,8 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     // if (glitchSeries > 2) glitch = false;
     // if (glitch) cout << mPLC->mPcnt << "\n";
     // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
-
-    mPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+        // mPLC->toFloatBuf((MY_TYPE *)mUdp->mByteTmpAudioBuf);
+    mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
     mPLC->burg( (bool)cadence );
     mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
     // mTest->sineTest((MY_TYPE *)outputBuffer);

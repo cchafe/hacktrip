@@ -187,12 +187,12 @@ public:
     int mRcvSeq; // sequence number read from the header of the ingoing packet
     int mLastRcvSeq; // outgoing to audio
     bool sendReady;
+    std::vector<int8_t *> mRingBuffer; // ring buffer
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     int mWptr; // ring buffer write pointer
     int mRptr; // ring buffer read pointer
     int mRing; // ring buffer length in number of packets
-    std::vector<int8_t *> mRingBuffer; // ring buffer
     QHostAddress serverHostAddress; // peer
     int mPeerUdpPort = 0; // ephemeral peer audio port given by peer
     HeaderStruct mHeader; // packet header for the outgoing packet
