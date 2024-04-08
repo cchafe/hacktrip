@@ -163,7 +163,7 @@ public:
     uint8_t NumIncomingChannelsFromNet; ///< Number of incoming Channels from the
     ///< network
     uint8_t
-    NumOutgoingChannelsToNet; ///< Number of outgoing Channels to the network
+        NumOutgoingChannelsToNet; ///< Number of outgoing Channels to the network
 };
 
 class UDP : public QUdpSocket  { // UDP socket for send and receive
@@ -190,7 +190,9 @@ public:
     std::vector<int8_t *> mRingBuffer; // ring buffer
     int mWptr; // ring buffer write pointer
     int mRptr; // ring buffer read pointer
+    int mLag; // ring buffer pointer default separation
     int mRing; // ring buffer length in number of packets
+
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
     QHostAddress serverHostAddress; // peer
@@ -251,7 +253,7 @@ public:
     void setTest(int channels) { mTest = new TestAudio(channels); }
     void setPLC(int channels, int fpp, int bps, int packetsInThePast) {
         if (mPLC == nullptr) mPLC = new PLC(channels, fpp,
-                               bps, packetsInThePast);
+                           bps, packetsInThePast);
     }
 
 private:
@@ -296,12 +298,13 @@ class APIsettings {
     static const int dLocalAudioUdpPort = 4464;
     static const int dSocketWaitMs = 1500;
     static const int dBufferQueueLength =
-            3; // queue not used for localhost testing
+        3; // queue not used for localhost testing
     static const int dExitPacketSize = 63;
     static const int dTimeoutMS = 1000;
     constexpr static const double dPacketPeriodMS =
-            (1000.0 / (double)(dSampleRate / dFPP));
-    static const int dRingBufferLength = 150;
+        (1000.0 / (double)(dSampleRate / dFPP));
+    static const int dRingBufferLength = 15;
+    static const int dRingBufferLag = 1;
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
@@ -328,6 +331,7 @@ private:
     int timeoutMS = dTimeoutMS;
     double packetPeriodMS = dPacketPeriodMS;
     int ringBufferLength = dRingBufferLength;
+    int ringBufferLag = dRingBufferLag;
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
     bool usePLC = dUsePLC;

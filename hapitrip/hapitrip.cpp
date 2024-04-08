@@ -291,8 +291,9 @@ void UDP::start(int localBindPort, bool read) {
 
     // setup ring buffer
     mRing = Hapitrip::as.ringBufferLength;
+    mLag = Hapitrip::as.ringBufferLag;
     mWptr = mRing / 2;
-    mRptr = mWptr - 2;
+    mRptr = mWptr - mLag;
     for (int i = 0; i < mRing; i++) {
         int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
         for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
@@ -483,7 +484,6 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     if (mPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
     else mProducer->send((int8_t *)inputBuffer);
-    int lag = 1;
     mPLC->zeroTmpFloatBuf();
         // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
     {
@@ -491,7 +491,7 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
          if (mUdp->mRptr == mUdp->mWptr) {
             mPLC->burg( true );
             mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
-            mUdp->mWptr += lag;
+            mUdp->mWptr += mUdp->mLag;
             mUdp->mWptr %= mUdp->mRing;
             std::cout << mUdp->mWptr  << "\n";
          } else {
