@@ -371,9 +371,9 @@ void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to 
     {
         // const QMutexLocker locker(&Hapitrip::as.mutexRcv);
         mRcvSeq = seq;
-        int cadence = (mRcvSeq - mLastRcvSeq);
-        if (cadence < 0) cadence += 65536;
-        memcpy(mRingBuffer[cadence], buf, Hapitrip::as.audioDataLen); // put in ring
+        memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
+        mWptr++;
+        mWptr %= mRing;
     }
 }
 
@@ -483,33 +483,36 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     if (mPLC->mPcnt < 1000) // jt sends back to port found in first packet it gets
         mUdp->send((int8_t *)inputBuffer);
     else mProducer->send((int8_t *)inputBuffer);
-
+    int lag = 1;
     mPLC->zeroTmpFloatBuf();
         // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
-    int cadence = 0;
-    int skip = 0;
     {
+        // int cadence = (mUdp->mWptr - mUdp->mRptr);
+        // if (cadence < 0) cadence += mUdp->mRing;
+        // if (cadence>1) std::cout << "\n";
+        // std::cout << cadence;
         // const QMutexLocker locker(&Hapitrip::as.mutexRcv);
-        cadence = mUdp->byteRingBufferPull();
-        if (cadence == 0) {
+         if (mUdp->mRptr == mUdp->mWptr) {
             mPLC->burg( true );
             mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
-            return 0;
-        }
-        if (cadence > 5) // Hapitrip::as.packetsInThePast)
-            skip = cadence - 5; // Hapitrip::as.packetsInThePast;
-        for ( int i = cadence; i > skip; i--) {
-            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[i]);
+            mUdp->mWptr += lag;
+            mUdp->mWptr %= mUdp->mRing;
+            std::cout << mUdp->mWptr  << "\n";
+         } else {
+            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[mUdp->mRptr]);
             mPLC->burg( false );
-        }
+            mUdp->mRptr++;
+            mUdp->mRptr %= mUdp->mRing;
+         }
+
         mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
         // mTest->sineTest((MY_TYPE *)outputBuffer);
 
         // memcpy(outputBuffer, inputBuffer, Hapitrip::as.audioDataLen); // test straight wire
         // mTest->sineTest((MY_TYPE *)outputBuffer); // output sines
         // mTest->printSamples((MY_TYPE *)outputBuffer); // print audio signal
-        return 0;
     }
+    return 0;
 }
 #endif
 
