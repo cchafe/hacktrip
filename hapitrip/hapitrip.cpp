@@ -369,17 +369,13 @@ void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to 
     // mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
     {
-        const QMutexLocker locker(&Hapitrip::as.mutexRcv);
+        // const QMutexLocker locker(&Hapitrip::as.mutexRcv);
         mRcvSeq = seq;
         int cadence = (mRcvSeq - mLastRcvSeq);
         if (cadence < 0) cadence += 65536;
         memcpy(mRingBuffer[cadence], buf, Hapitrip::as.audioDataLen); // put in ring
     }
 }
-
-// JackTrip mBufferStrategy 1,2,3,4
-// virtual void receiveNetworkPacket(int8_t* ptrToReadSlot)
-// translates to ringBufferPull()
 
 int UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
     int cadence = (mRcvSeq - mLastRcvSeq);
@@ -493,16 +489,15 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     int cadence = 0;
     int skip = 0;
     {
-        const QMutexLocker locker(&Hapitrip::as.mutexRcv);
+        // const QMutexLocker locker(&Hapitrip::as.mutexRcv);
         cadence = mUdp->byteRingBufferPull();
         if (cadence == 0) {
-            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[0]);
             mPLC->burg( true );
             mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
             return 0;
         }
-        if (cadence > Hapitrip::as.packetsInThePast)
-            skip = cadence - Hapitrip::as.packetsInThePast;
+        if (cadence > 5) // Hapitrip::as.packetsInThePast)
+            skip = cadence - 5; // Hapitrip::as.packetsInThePast;
         for ( int i = cadence; i > skip; i--) {
             mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[i]);
             mPLC->burg( false );
