@@ -9,7 +9,7 @@ MainWindow::MainWindow(QWidget *parent)
     mUi->setupUi(this);
     mHt = new Hapitrip(); // APIstructure inits its params with its defaults
     mQuitShortCut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q),
-                                  this, SLOT(close()));
+                                  this, SLOT(stopAndClose()));
 }
 
 MainWindow::~MainWindow() {
@@ -32,10 +32,16 @@ void MainWindow::on_startButton_clicked() {
 }
 
 void MainWindow::on_stopButton_clicked() {
-    if (mHt != nullptr) {
+    if (mConnected) {
         mHt->stop();
     }
     //  this->close();
+}
+
+void MainWindow::stopAndClose() {
+    if (mConnected) on_stopButton_clicked();
+    QThread::msleep(300);
+    this->close();
 }
 
 void MainWindow::on_serverComboBox_currentIndexChanged(const QString &arg1)

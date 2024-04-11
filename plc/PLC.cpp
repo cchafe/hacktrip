@@ -159,7 +159,7 @@ Channel::Channel ( int fpp, int upToNow, int packetsInThePast ) {
 PLC::PLC(int chans, int fpp, int bps, int packetsInThePast)
     : channels(chans), fpp(fpp), bps(bps), packetsInThePast(packetsInThePast)
 {
-    cout << " --PLC " << channels << " channels\n";
+    cout << " --PLC " << packetsInThePast << " packetsInThePast\t" << channels << " channels\n";
     mPcnt = 0;
     mTime = new Time();
     mTime->start();
@@ -294,6 +294,7 @@ void PLC::burg(bool glitch) { // generate next bufferfull and convert to short i
         if (glitch) mTime->collect();
     }
     // if (Hapitrip::as.dVerbose)
+    if (true)
     if (!(mPcnt%300)) std::cout << "avg " << mTime->avg()
                   << " glitches " << mTime->glitches()
                   << " \n";

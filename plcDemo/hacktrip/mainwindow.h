@@ -31,6 +31,8 @@ private slots:
 
     void on_stopButton_clicked();
 
+    void stopAndClose();
+
     void on_FPPcomboBox_currentIndexChanged(const QString &arg1);
 
     void on_channelsSpinBox_valueChanged(int arg1);

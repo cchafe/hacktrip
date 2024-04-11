@@ -149,6 +149,8 @@ private:
 
 Hapitrip::Hapitrip() {
     mAudio = nullptr;
+    mTcp = nullptr;
+    mUdp = nullptr;
     mProducer = nullptr;
     mConsumer = nullptr;
 }
@@ -205,7 +207,7 @@ void Hapitrip::run() { // hit this before server times out in like 10 seconds
 
 void Hapitrip::stop() { // the whole show
 #ifndef AUDIO_ONLY
-    mUdp->stop();
+    mUdp->stop(); // sends stop datagram
     mProducer->stop();
     mConsumer->stop();
 #endif
@@ -292,8 +294,9 @@ void UDP::start(int localBindPort, bool read) {
     // setup ring buffer
     mRing = Hapitrip::as.ringBufferLength;
     mLag = Hapitrip::as.ringBufferLag;
-    mWptr = mRing / 2;
-    mRptr = mWptr - mLag;
+    mRingBufferPtrRange = Hapitrip::as.ringBufferPtrRange;
+    mRptr = 0;
+    mWptr = mRptr + mLag;
     for (int i = 0; i < mRing; i++) {
         int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
         for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
@@ -369,13 +372,10 @@ void UDP::rcvElapsedTime(bool restart) { // measure inter-packet interval
 void UDP::byteRingBufferPush(int8_t *buf, int seq) { // push received packet to ring
     // mTest->sineTest((MY_TYPE *)buf);
     //    mTest->printSamples((MY_TYPE *)buf);
-    {
-        const QMutexLocker locker(&Hapitrip::as.mutexRcv);
-        mRcvSeq = seq;
-        memcpy(mRingBuffer[mWptr], buf, Hapitrip::as.audioDataLen); // put in ring
-        mWptr++;
-        mWptr %= mRing;
-    }
+    mRcvSeq = seq;
+    memcpy(mRingBuffer[mWptr % mRing], buf, Hapitrip::as.audioDataLen); // put in ring
+    mWptr++;
+    mWptr %= mRingBufferPtrRange;
 }
 
 int UDP::byteRingBufferPull() { // pull next packet to play out from regulator or ring
@@ -420,25 +420,28 @@ void UDP::readPendingDatagrams() { // incoming is triggered from readyRead signa
     // because readyRead is emitted for a datagram only when all
     // previous datagrams are read
     if (!hasPendingDatagrams()) rcvElapsedTime(false);
-    while (hasPendingDatagrams()) {
-        rcvElapsedTime(true);
-        int size = pendingDatagramSize();
-        if (size == Hapitrip::as.exitPacketSize)
-            stop();
-        QHostAddress sender;
-        quint16 senderPort;
-        readDatagram(mRcvPacket.data(), mRcvPacket.size(), &sender, &senderPort);
-        memcpy(&mHeader, mRcvPacket.data(), sizeof(HeaderStruct));
-        int rcvSeq = mHeader.SeqNumber;
-        if (rcvSeq % Hapitrip::as.reportAfterPackets == 0)
-            if (Hapitrip::as.verbose) std::cout
-                    << "UDP rcv: seq = " << rcvSeq
-                    << " from " << senderPort
-                    << std::endl;
-        int8_t *audioBuf = (int8_t *)(mRcvPacket.data() + sizeof(HeaderStruct));
-            // mTest->sineTest((MY_TYPE *)audioBuf); // output sines
-        //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio signal
-        byteRingBufferPush(audioBuf, rcvSeq);
+    {
+        // const QMutexLocker locker(&Hapitrip::as.mutexRcv);
+        while (hasPendingDatagrams()) {
+            rcvElapsedTime(true);
+            int size = pendingDatagramSize();
+            if (size == Hapitrip::as.exitPacketSize)
+                stop();
+            QHostAddress sender;
+            quint16 senderPort;
+            readDatagram(mRcvPacket.data(), mRcvPacket.size(), &sender, &senderPort);
+            memcpy(&mHeader, mRcvPacket.data(), sizeof(HeaderStruct));
+            int rcvSeq = mHeader.SeqNumber;
+            if (rcvSeq % Hapitrip::as.reportAfterPackets == 0)
+                if (Hapitrip::as.verbose) std::cout
+                        << "UDP rcv: seq = " << rcvSeq
+                        << " from " << senderPort
+                        << std::endl;
+            int8_t *audioBuf = (int8_t *)(mRcvPacket.data() + sizeof(HeaderStruct));
+                // mTest->sineTest((MY_TYPE *)audioBuf); // output sines
+            //            mTest->printSamples((MY_TYPE *)audioBuf); // print audio signal
+            byteRingBufferPush(audioBuf, rcvSeq);
+        }
     }
 }
 
@@ -487,19 +490,24 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
     mPLC->zeroTmpFloatBuf();
         // mTest->sineTest((MY_TYPE *)mUdp->mByteTmpAudioBuf);
     {
-        const QMutexLocker locker(&Hapitrip::as.mutexRcv);
-         if (mUdp->mRptr == mUdp->mWptr) {
+        // const QMutexLocker locker(&Hapitrip::as.mutexRcv);
+        // locks up occasionally, not needed
+
+        // need to distinguish wraparound from big underrun
+        int cadence = mUdp->mWptr - mUdp->mRptr;
+        if (cadence < -mUdp->mRingBufferPtrRange/2)
+            cadence += mUdp->mRingBufferPtrRange;
+        if (cadence <= 0) {
             mPLC->burg( true );
-            mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
-            mUdp->mWptr += mUdp->mLag;
-            mUdp->mWptr %= mUdp->mRing;
-            std::cout << mUdp->mWptr  << "\n";
-         } else {
-            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[mUdp->mRptr]);
+            mUdp->mWptr = mUdp->mRptr + mUdp->mLag;
+            mUdp->mWptr %= mUdp->mRingBufferPtrRange;
+            // std::cout << mUdp->mWptr  << "\n";
+        } else {
+            mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[mUdp->mRptr % mUdp->mRing]);
             mPLC->burg( false );
             mUdp->mRptr++;
-            mUdp->mRptr %= mUdp->mRing;
-         }
+            mUdp->mRptr %= mUdp->mRingBufferPtrRange;
+        }
 
         mPLC->fromFloatBuf((MY_TYPE *)outputBuffer);
         // mTest->sineTest((MY_TYPE *)outputBuffer);

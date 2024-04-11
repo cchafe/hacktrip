@@ -192,6 +192,7 @@ public:
     int mRptr; // ring buffer read pointer
     int mLag; // ring buffer pointer default separation
     int mRing; // ring buffer length in number of packets
+    int mRingBufferPtrRange; // ring buffer ptr range
 
 private:
     void rcvElapsedTime(bool restart); // tracks elapsed time since last incoming packet
@@ -303,8 +304,9 @@ class APIsettings {
     static const int dTimeoutMS = 1000;
     constexpr static const double dPacketPeriodMS =
         (1000.0 / (double)(dSampleRate / dFPP));
-    static const int dRingBufferLength = 15;
+    static const int dRingBufferLength = 2;
     static const int dRingBufferLag = 1;
+    static const int dRingBufferPtrRange = 1024;
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
@@ -332,6 +334,7 @@ private:
     double packetPeriodMS = dPacketPeriodMS;
     int ringBufferLength = dRingBufferLength;
     int ringBufferLag = dRingBufferLag;
+    int ringBufferPtrRange = dRingBufferPtrRange;
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
     bool usePLC = dUsePLC;
