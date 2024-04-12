@@ -190,7 +190,6 @@ public:
     std::vector<int8_t *> mRingBuffer; // ring buffer
     int mWptr; // ring buffer write pointer
     int mRptr; // ring buffer read pointer
-    int mLag; // ring buffer pointer default separation
     int mRing; // ring buffer length in number of packets
     int mRingBufferPtrRange; // ring buffer ptr range
 
@@ -306,7 +305,7 @@ class APIsettings {
         (1000.0 / (double)(dSampleRate / dFPP));
     static const int dRingBufferLength = 2;
     static const int dRingBufferLag = 1;
-    static const int dRingBufferPtrRange = 1024;
+    static const int dRingBufferPtrRangeFactor = 100;
     static const int dReportAfterPackets = 500;
     static const bool dVerbose = 0;
     static const bool dUsePLC = 0;
@@ -333,8 +332,7 @@ private:
     int timeoutMS = dTimeoutMS;
     double packetPeriodMS = dPacketPeriodMS;
     int ringBufferLength = dRingBufferLength;
-    int ringBufferLag = dRingBufferLag;
-    int ringBufferPtrRange = dRingBufferPtrRange;
+    int ringBufferPtrRange = dRingBufferLength * dRingBufferPtrRangeFactor;
     int reportAfterPackets = dReportAfterPackets;
     bool verbose = dVerbose;
     bool usePLC = dUsePLC;

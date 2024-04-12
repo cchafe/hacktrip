@@ -293,10 +293,9 @@ void UDP::start(int localBindPort, bool read) {
 
     // setup ring buffer
     mRing = Hapitrip::as.ringBufferLength;
-    mLag = Hapitrip::as.ringBufferLag;
     mRingBufferPtrRange = Hapitrip::as.ringBufferPtrRange;
     mRptr = 0;
-    mWptr = mRptr + mLag;
+    mWptr = mRptr;
     for (int i = 0; i < mRing; i++) {
         int8_t *tmp = new int8_t[Hapitrip::as.audioDataLen];
         for (int j = 0; j < Hapitrip::as.audioDataLen; j++)
@@ -499,9 +498,6 @@ int Audio::audioCallback(void *outputBuffer, void *inputBuffer,
             cadence += mUdp->mRingBufferPtrRange;
         if (cadence <= 0) {
             mPLC->burg( true );
-            mUdp->mWptr = mUdp->mRptr + mUdp->mLag;
-            mUdp->mWptr %= mUdp->mRingBufferPtrRange;
-            // std::cout << mUdp->mWptr  << "\n";
         } else {
             mPLC->toFloatBuf((MY_TYPE *)mUdp->mRingBuffer[mUdp->mRptr % mUdp->mRing]);
             mPLC->burg( false );
