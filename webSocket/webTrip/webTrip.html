@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web JackTrip Client (Single File)</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f0f0; color: #333; display: grid; place-items: center; height: 100vh; margin: 0; }
+        #container { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }
+        h1 { margin-top: 0; }
+        button { font-size: 1.2rem; padding: 0.8rem 1.5rem; margin: 1rem; cursor: pointer; border: none; border-radius: 4px; color: white; }
+        #startButton { background-color: #28a745; }
+        #stopButton { background-color: #dc3545; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        #status { font-style: italic; color: #555; margin-top: 1rem; min-height: 1.2em; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Web JackTrip Client</h1>
+        <p>Connects to a JackTrip server via a WebSocket proxy.</p>
+        <div>
+            <button id="startButton">Start Audio</button>
+            <button id="stopButton" disabled>Stop Audio</button>
+        </div>
+        <div id="status">Ready to connect.</div>
+    </div>
+
+    <script>
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusDiv = document.getElementById('status');
+
+        let audioContext;
+        let workletNode;
+        let socket;
+
+        const PROXY_URL = 'ws://localhost:8080';
+
+        // --- AudioWorklet Code ---
+        const workletCode = `
+            const FRAMES_PER_PACKET = 128;
+            const CHANNELS = 2;
+
+            class JackTripProcessor extends AudioWorkletProcessor {
+              constructor() {
+                super();
+                this.port.onmessage = this.handleMessage.bind(this);
+                
+                this._outgoingBuffer = [
+                  new Float32Array(FRAMES_PER_PACKET),
+                  new Float32Array(FRAMES_PER_PACKET)
+                ];
+                this._outgoingFrames = 0;
+
+                this._jitterBuffer = [];
+                this._incomingBuffer = new Int16Array(FRAMES_PER_PACKET * CHANNELS);
+                this._playhead = FRAMES_PER_PACKET;
+              }
+
+              handleMessage(event) {
+                // This now receives a raw audio payload with the header already stripped by the proxy
+                const newPacket = new Int16Array(event.data);
+                this._jitterBuffer.push(newPacket);
+                if (this._jitterBuffer.length > 5) {
+                    this._jitterBuffer.shift(); 
+                }
+              }
+
+              process(inputs, outputs, parameters) {
+                const input = inputs[0];
+                const output = outputs[0];
+
+                if (input.length >= CHANNELS && input[0].length > 0) {
+                  const inputL = input[0];
+                  const inputR = input[1];
+
+                  for (let i = 0; i < inputL.length; i++) {
+                    this._outgoingBuffer[0][this._outgoingFrames] = inputL[i];
+                    this._outgoingBuffer[1][this._outgoingFrames] = inputR[i];
+                    this._outgoingFrames++;
+
+                    if (this._outgoingFrames >= FRAMES_PER_PACKET) {
+                      this.sendPacket();
+                      this._outgoingFrames = 0;
+                    }
+                  }
+                }
+
+                const outputL = output[0];
+                const outputR = output[1];
+                for (let i = 0; i < outputL.length; i++) {
+                    if (this._playhead >= FRAMES_PER_PACKET) {
+                        const nextPacket = this._jitterBuffer.shift();
+                        if (nextPacket) {
+                            this._incomingBuffer.set(nextPacket);
+                        } else {
+                            this._incomingBuffer.fill(0); 
+                        }
+                        this._playhead = 0;
+                    }
+
+                    const frameL = this._incomingBuffer[this._playhead];
+                    const frameR = this._incomingBuffer[this._playhead + FRAMES_PER_PACKET];
+                    
+                    outputL[i] = frameL / 32768.0;
+                    outputR[i] = frameR / 32768.0;
+
+                    this._playhead++;
+                }
+                return true;
+              }
+              
+              sendPacket() {
+                  // Send only the raw audio payload. The proxy will add the header.
+                  const packet = new Int16Array(FRAMES_PER_PACKET * CHANNELS);
+                  for (let i = 0; i < FRAMES_PER_PACKET; i++) {
+                      packet[i] = this._outgoingBuffer[0][i] * 32767.0;
+                      packet[i + FRAMES_PER_PACKET] = this._outgoingBuffer[1][i] * 32767.0;
+                  }
+                  this.port.postMessage(packet.buffer, [packet.buffer]);
+              }
+            }
+
+            registerProcessor('jacktrip-processor', JackTripProcessor);
+        `;
+        // --- End of AudioWorklet Code ---
+
+        async function startAudio() {
+            try {
+                statusDiv.textContent = 'Initializing...';
+                startButton.disabled = true;
+
+                audioContext = new AudioContext({ sampleRate: 48000 });
+                
+                const workletBlob = new Blob([workletCode], { type: 'application/javascript' });
+                const workletURL = URL.createObjectURL(workletBlob);
+                await audioContext.audioWorklet.addModule(workletURL);
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 2, sampleRate: 48000, echoCancellation: false,
+                        noiseSuppression: false, autoGainControl: false
+                    }
+                });
+
+                socket = new WebSocket(PROXY_URL);
+                socket.binaryType = 'arraybuffer';
+
+                socket.onopen = () => {
+                    statusDiv.textContent = 'Connection established. Starting audio stream...';
+                    
+                    const micSource = audioContext.createMediaStreamSource(stream);
+                    workletNode = new AudioWorkletNode(audioContext, 'jacktrip-processor');
+                    
+                    micSource.connect(workletNode).connect(audioContext.destination);
+
+                    workletNode.port.onmessage = (event) => {
+                        if (socket.readyState === WebSocket.OPEN) socket.send(event.data);
+                    };
+
+                    socket.onmessage = (event) => workletNode.port.postMessage(event.data);
+
+                    statusDiv.textContent = 'Streaming audio.';
+                    stopButton.disabled = false;
+                };
+
+                socket.onclose = () => {
+                    statusDiv.textContent = 'Connection closed.';
+                    stopAudio(false);
+                };
+                
+                socket.onerror = (err) => {
+                    console.error('WebSocket Error:', err);
+                    statusDiv.textContent = 'Connection error.';
+                    stopAudio(false);
+                };
+
+            } catch (error) {
+                console.error('Failed to start audio:', error);
+                statusDiv.textContent = `Error: ${error.message}`;
+                startButton.disabled = false;
+            }
+        }
+
+        function stopAudio(closeSocket = true) {
+            if (closeSocket && socket) {
+                socket.close();
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+            socket = null;
+            audioContext = null;
+            workletNode = null;
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        startButton.addEventListener('click', startAudio);
+        stopButton.addEventListener('click', () => stopAudio(true));
+    </script>
+</body>
+</html>
+

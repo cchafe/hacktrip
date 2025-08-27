@@ -1,0 +1,4 @@
+\beamer@sectionintoc {1}{Development Journey}{4}{0}{1}
+\beamer@sectionintoc {2}{Implementation 1: Native Qt6/C++ Client}{5}{0}{2}
+\beamer@sectionintoc {3}{Implementation 2: Web Audio + Proxy}{9}{0}{3}
+\beamer@sectionintoc {4}{Conclusion}{14}{0}{4}

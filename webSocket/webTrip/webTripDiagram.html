@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="sans-serif">
+  <style>
+    .box { fill: #f9f9f9; stroke: #333; stroke-width: 1.5; rx: 8; }
+    .label { font-size: 18px; font-weight: bold; text-anchor: middle; }
+    .sub-label { font-size: 14px; text-anchor: middle; }
+    .info-text { font-size: 13px; text-anchor: middle; fill: #555; }
+    .arrow-audio { stroke: #28a745; stroke-width: 2.5; fill: none; }
+    .arrow-control { stroke: #007bff; stroke-width: 2; fill: none; stroke-dasharray: 6 4; }
+    .arrow-ws { stroke: #fd7e14; stroke-width: 2.5; fill: none; }
+    .legend-text { font-size: 14px; }
+  </style>
+
+  <defs>
+    <marker id="arrowhead-audio" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#28a745" />
+    </marker>
+    <marker id="arrowhead-control" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#007bff" />
+    </marker>
+    <marker id="arrowhead-ws" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fd7e14" />
+    </marker>
+  </defs>
+
+  <!-- Main Component Boxes -->
+  <rect x="50" y="100" width="350" height="500" class="box"/>
+  <text x="225" y="135" class="label">User's Web Browser</text>
+  <text x="225" y="155" class="sub-label">(index.html)</text>
+
+  <rect x="425" y="100" width="350" height="500" class="box"/>
+  <text x="600" y="135" class="label">Proxy Server</text>
+  <text x="600" y="155" class="sub-label">(proxy.js)</text>
+  
+  <rect x="800" y="100" width="350" height="500" class="box"/>
+  <text x="975" y="135" class="label">JackTrip Hub Server</text>
+  <text x="975" y="155" class="sub-label">(171.64.197.158)</text>
+
+  <!-- Browser Internals -->
+  <text x="225" y="220" class="info-text" style="font-weight:bold;">Web Audio API</text>
+  <text x="130" y="300" class="info-text">Microphone</text>
+  <text x="130" y="320" class="info-text">(Float32, Interleaved)</text>
+  <text x="225" y="400" class="info-text">AudioWorklet</text>
+  <text x="225" y="420" class="info-text">Converts &amp; Packetizes</text>
+  <text x="320" y="500" class="info-text">Speakers</text>
+  <text x="320" y="520" class="info-text">(Float32, Interleaved)</text>
+  
+  <!-- Proxy Internals -->
+  <text x="600" y="220" class="info-text" style="font-weight:bold;">Core Logic</text>
+  <text x="600" y="240" class="info-text">Adds/Strips Header</text>
+  <text x="600" y="260" class="info-text">Manages Seq. Number</text>
+  <text x="500" y="400" class="info-text">WebSocket Server</text>
+  <text x="500" y="420" class="info-text">(Port 8080)</text>
+  <text x="700" y="400" class="info-text">UDP &amp; TCP Sockets</text>
+  
+  <!-- Server Internals -->
+  <text x="975" y="220" class="info-text" style="font-weight:bold;">JackTrip Process</text>
+  <text x="975" y="400" class="info-text">TCP Listener (Port 4464)</text>
+  <text x="975" y="500" class="info-text">UDP Listener (Ephemeral Port)</text>
+
+
+  <!-- Handshake Flow -->
+  <path class="arrow-control" d="M 775 410 h 25" marker-end="url(#arrowhead-control)"/>
+  <text x="788" y="395" class="info-text">1. Send UDP Port</text>
+  <path class="arrow-control" d="M 800 430 h -25" marker-end="url(#arrowhead-control)"/>
+  <text x="788" y="445" class="info-text">2. Get Ephemeral Port</text>
+  <text x="690" y="360" class="info-text" style="fill:#007bff; font-weight:bold;">TCP Handshake</text>
+
+
+  <!-- Outgoing Audio Flow -->
+  <path class="arrow-ws" d="M 400 300 H 425" marker-end="url(#arrowhead-ws)"/>
+  <text x="360" y="260" class="info-text">Raw Audio Payload</text>
+  <text x="360" y="280" class="info-text">(Non-interleaved Int16)</text>
+  <path class="arrow-audio" d="M 775 300 H 800" marker-end="url(#arrowhead-audio)"/>
+  <text x="725" y="260" class="info-text">UDP Packet</text>
+  <text x="725" y="280" class="info-text">(Header + Payload)</text>
+  
+  <!-- Incoming Audio Flow -->
+  <path class="arrow-ws" d="M 425 500 H 400" marker-end="url(#arrowhead-ws)"/>
+  <text x="470" y="540" class="info-text">Raw Audio Payload</text>
+  <text x="470" y="560" class="info-text">(Header Stripped)</text>
+  <path class="arrow-audio" d="M 800 500 H 775" marker-end="url(#arrowhead-audio)"/>
+  <text x="850" y="540" class="info-text">UDP Packet</text>
+  <text x="850" y="560" class="info-text">(Header + Payload)</text>
+  
+  <!-- Internal Browser Flow -->
+  <path d="M 130 335 V 380" stroke="#333" stroke-width="1.5" marker-end="url(#arrowhead-ws)"/>
+  <path d="M 225 435 V 480 C 225 490, 245 490, 265 490 H 290" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrowhead-ws)"/>
+  
+  <!-- Legend -->
+  <rect x="50" y="620" width="300" height="70" class="box" fill="#fff"/>
+  <text x="200" y="640" class="label" font-size="16px">Legend</text>
+  <path class="arrow-ws" d="M 65 655 h 30"/>
+  <text x="100" y="660" class="legend-text">WebSocket Audio</text>
+  <path class="arrow-audio" d="M 65 675 h 30"/>
+  <text x="100" y="680" class="legend-text">UDP Audio</text>
+  <path class="arrow-control" d="M 195 655 h 30"/>
+  <text x="230" y="660" class="legend-text">TCP Control</text>
+
+</svg>

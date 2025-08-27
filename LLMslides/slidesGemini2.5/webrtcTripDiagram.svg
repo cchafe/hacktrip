@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="sans-serif">
+  <style>
+    .box { fill: #fff0f5; stroke: #c71585; stroke-width: 1.5; rx: 8; }
+    .label { font-size: 18px; font-weight: bold; text-anchor: middle; }
+    .sub-label { font-size: 14px; text-anchor: middle; }
+    .info-text { font-size: 13px; text-anchor: middle; fill: #333; }
+    .arrow-audio { stroke: #c71585; stroke-width: 2.5; fill: none; }
+    .legend-text { font-size: 14px; }
+  </style>
+
+  <defs>
+    <marker id="arrowhead-audio" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c71585" />
+    </marker>
+  </defs>
+
+  <!-- Main Component Boxes -->
+  <rect x="50" y="100" width="550" height="500" class="box"/>
+  <text x="325" y="135" class="label">User's Web Browser</text>
+  <text x="325" y="155" class="sub-label">(Web Audio + WebRTC)</text>
+
+  <rect x="650" y="100" width="500" height="500" class="box"/>
+  <text x="900" y="135" class="label">JackTrip Hub Server</text>
+  <text x="900" y="155" class="sub-label">(WebRTC-Aware)</text>
+
+  <!-- Client Internals -->
+  <text x="170" y="220" class="info-text" style="font-weight:bold;">Web Audio API</text>
+  <text x="170" y="240" class="info-text">(From Mic)</text>
+
+  <text x="480" y="520" class="info-text" style="font-weight:bold;">Web Audio API</text>
+  <text x="480" y="540" class="info-text">(To Speakers)</text>
+  
+  <text x="325" y="250" class="info-text" style="font-weight:bold;">AudioWorklet</text>
+  <text x="325" y="270" class="info-text">Converts audio format &amp; packetizes</text>
+  
+  <text x="325" y="400" class="info-text" style="font-weight:bold;">WebRTC RTCDataChannel</text>
+  <text x="325" y="420" class="info-text">Sends/receives raw audio packets directly</text>
+
+  <!-- Server Internals -->
+  <text x="900" y="400" class="info-text" style="font-weight:bold;">WebRTC Stack</text>
+  <text x="900" y="420" class="info-text">(Handles DTLS/SCTP)</text>
+  <text x="900" y="440" class="info-text">Receives/sends raw audio packets</text>
+
+
+  <!-- Data Flow -->
+  <path class="arrow-audio" d="M 580 410 h 70" marker-end="url(#arrowhead-audio)"/>
+  <text x="590" y="395" class="info-text">Outgoing Audio</text>
+  <path class="arrow-audio" d="M 650 430 h -70" marker-end="url(#arrowhead-audio)"/>
+  <text x="700" y="445" class="info-text">Incoming Audio</text>
+  
+  <text x="615" y="350" class="info-text" style="font-weight:bold; fill: #c71585;">Direct RTCDataChannel Connection</text>
+  <text x="615" y="370" class="info-text">(No Proxy Server Needed)</text>
+  
+  <!-- Internal Client Flow -->
+  <path class="arrow-audio" d="M 170 260 v 10"/>
+  <path class="arrow-audio" d="M 170 270 c 0 30, 155 -30, 155 -30" fill="none" marker-end="url(#arrowhead-audio)"/>
+  <path class="arrow-audio" d="M 325 290 v 80" marker-end="url(#arrowhead-audio)"/>
+  <path class="arrow-audio" d="M 325 450 v -80" marker-end="url(#arrowhead-audio)"/>
+  <path class="arrow-audio" d="M 325 370 c 0, 100, 155, 100, 155, 120 v 10" fill="none" marker-end="url(#arrowhead-audio)"/>
+</svg>
+

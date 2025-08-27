@@ -1,0 +1,22 @@
+\frametitle{Key Logic: The Proxy Header}
+The Node.js proxy adds the header before forwarding audio to the JackTrip server.
+\begin{lstlisting}[language=myJS]
+ws.on('message', audioPayload => {
+    // Create a buffer for the full packet
+    const packet = Buffer.alloc(HEADER_SIZE + audioPayload.length);
+
+    // 1. Write the JackTrip header (all Little Endian)
+    packet.writeBigUInt64LE(BigInt(Date.now()), 0);
+    packet.writeUInt16LE(sequenceNumber, 8);
+    // ... write other header fields ...
+
+    // Increment and wrap the sequence number
+    sequenceNumber = (sequenceNumber + 1) & 0xFFFF;
+
+    // 2. Copy the audio payload from the web client
+    audioPayload.copy(packet, HEADER_SIZE);
+
+    // 3. Send the complete packet via UDP
+    udpSocket.send(packet, ...);
+});
+\end{lstlisting}

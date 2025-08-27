@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="sans-serif">
+  <style>
+    .box { fill: #f0f8ff; stroke: #4682b4; stroke-width: 1.5; rx: 8; }
+    .label { font-size: 18px; font-weight: bold; text-anchor: middle; }
+    .sub-label { font-size: 14px; text-anchor: middle; }
+    .info-text { font-size: 13px; text-anchor: middle; fill: #333; }
+    .arrow-audio { stroke: #28a745; stroke-width: 2.5; fill: none; }
+    .arrow-control { stroke: #007bff; stroke-width: 2; fill: none; stroke-dasharray: 6 4; }
+    .legend-text { font-size: 14px; }
+  </style>
+
+  <defs>
+    <marker id="arrowhead-audio" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#28a745" />
+    </marker>
+    <marker id="arrowhead-control" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#007bff" />
+    </marker>
+  </defs>
+
+  <!-- Main Component Boxes -->
+  <rect x="50" y="100" width="550" height="500" class="box"/>
+  <text x="325" y="135" class="label">JackTripQtClient Application</text>
+  <text x="325" y="155" class="sub-label">(Qt6 / C++)</text>
+
+  <rect x="650" y="100" width="500" height="500" class="box"/>
+  <text x="900" y="135" class="label">JackTrip Hub Server</text>
+  <text x="900" y="155" class="sub-label">(171.64.197.158)</text>
+
+  <!-- Client Internals -->
+  <text x="140" y="220" class="info-text" style="font-weight:bold;">QAudioSource</text>
+  <text x="140" y="240" class="info-text">(From System Mic)</text>
+  <text x="140" y="260" class="info-text">Interleaved Int16</text>
+
+  <text x="485" y="520" class="info-text" style="font-weight:bold;">QAudioSink</text>
+  <text x="485" y="540" class="info-text">(To System Speakers)</text>
+  <text x="485" y="560" class="info-text">Interleaved Int16</text>
+  
+  <text x="325" y="250" class="info-text" style="font-weight:bold;">Core Logic in JackTripClient</text>
+  <text x="325" y="270" class="info-text" style="font-weight:bold;">(send/receive slots)</text>
+  <rect x="190" y="280" width="270" height="180" rx="5" fill="none" stroke="#aaa" stroke-dasharray="3 3"/>
+  <text x="325" y="310" class="info-text">De-interleave Audio</text>
+  <text x="325" y="330" class="info-text">&amp; Add JackTrip Header</text>
+  <text x="325" y="400" class="info-text">Strip JackTrip Header</text>
+  <text x="325" y="420" class="info-text">&amp; Interleave Audio</text>
+
+
+  <text x="140" y="480" class="info-text" style="font-weight:bold;">QTcpSocket</text>
+  <text x="485" y="220" class="info-text" style="font-weight:bold;">QUdpSocket</text>
+
+
+  <!-- Server Internals -->
+  <text x="900" y="480" class="info-text" style="font-weight:bold;">TCP Listener (Port 4464)</text>
+  <text x="900" y="220" class="info-text" style="font-weight:bold;">UDP Listener (Ephemeral Port)</text>
+
+
+  <!-- Handshake Flow -->
+  <path class="arrow-control" d="M 230 480 h 420" marker-end="url(#arrowhead-control)"/>
+  <text x="560" y="465" class="info-text">1. Send Local UDP Port</text>
+  <path class="arrow-control" d="M 650 500 h -420" marker-end="url(#arrowhead-control)"/>
+  <text x="340" y="515" class="info-text">2. Receive Ephemeral Port</text>
+
+
+  <!-- Outgoing Audio Flow -->
+  <path class="arrow-audio" d="M 230 240 h 20" marker-end="url(#arrowhead-audio)"/>
+  <text x="210" y="280" class="info-text">Raw Audio</text>
+  <path class="arrow-audio" d="M 380 345 h 105" marker-end="url(#arrowhead-audio)"/>
+  <text x="410" y="365" class="info-text">Packet w/ Header</text>
+  <path class="arrow-audio" d="M 575 240 h 75" marker-end="url(#arrowhead-audio)"/>
+  
+
+  <!-- Incoming Audio Flow -->
+  <path class="arrow-audio" d="M 650 240 h -75" marker-end="url(#arrowhead-audio)"/>
+  <text x="580" y="280" class="info-text">Packet w/ Header</text>
+  <path class="arrow-audio" d="M 485 380 h -105" marker-end="url(#arrowhead-audio)"/>
+  <text x="440" y="440" class="info-text">Raw Audio</text>
+  <path class="arrow-audio" d="M 270 440 h -40" marker-end="url(#arrowhead-audio)"/>
+  <path class="arrow-audio" d="M 230 440 L 230 540 L 395 540 " marker-end="url(#arrowhead-audio)"/>
+  
+
+  <!-- Legend -->
+  <rect x="50" y="620" width="300" height="70" class="box" fill="#fff"/>
+  <text x="200" y="640" class="label" font-size="16px">Legend</text>
+  <path class="arrow-audio" d="M 65 655 h 30"/>
+  <text x="100" y="660" class="legend-text">Audio Data Flow</text>
+  <path class="arrow-control" d="M 65 675 h 30"/>
+  <text x="100" y="680" class="legend-text">TCP Control Flow</text>
+
+</svg>
+

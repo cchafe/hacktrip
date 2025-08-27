@@ -1,0 +1,39 @@
+cc@cmn9:~/jacktrip/builddir$ PIPEWIRE_LATENCY=128/48000 ./jacktrip -S -p1
+
+////////////////////
+
+cc@fedora:~/Desktop/webTrip$ node proxy.js
+cc@fedora:~/Desktop/webTrip$ python3 -m http.server
+http://localhost:8000/webTrip.html
+
+////////////////////
+
+
+
+
+Updated Instructions Run the Proxy Server: This step is unchanged. 
+
+Run proxy.js with Node.js. 
+
+# If you haven't already npm install ws 
+# Run the proxy node proxy.js 
+
+Run the Web App: Save the new code above as a single index.html file. 
+You must still serve this file from a local web server. 
+The easiest way is to open a terminal in the directory where you saved index.html and run: 
+python3 -m http.server 
+Open your browser and navigate to 
+http://localhost:8000
+
+////////////////////
+WebSocket proxy server started on port 8080
+Web client connected.
+Proxy UDP socket bound to local port 59896
+TCP: Connected to JackTrip server 171.64.197.158:4464
+TCP: Sending local UDP port 59896 as a 4-byte LE integer.
+TCP: Received ephemeral UDP port 61002 from server.
+TCP: Connection closed.
+Audio bridge ready. Forwarding audio between WebSocket and UDP 171.64.197.158:61002
+Web client disconnected.
+Cleaning up resources.
+
