@@ -1,3 +1,10 @@
+cmn9
+PIPEWIRE_LATENCY=128/48000 ./jacktrip -S -p1
+...but pipewire won't do p1, so needs qjackctl and manual straightwire
+
+launch JackTripQtClient from terminal or creator
+
+/////////////////////
 Of course. That is the perfect architectural solution to this problem. By building a native C++ application with Qt, you escape the browser sandbox entirely and can create the raw TCP and UDP sockets required to communicate directly with a standard JackTrip hub server.
 
 This is a complete rewrite, not a simple conversion, as we'll be using Qt's APIs for the UI, networking, and audio instead of their web-based counterparts. I will structure the project into three main files for clarity:
